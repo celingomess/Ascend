@@ -1,0 +1,30 @@
+# Python virtual environment
+venv/
+ENV/
+env/
+.venv/
+
+# Environment variables & secrets
+.env
+instance/
+
+# Python compiled files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Databases & local files
+*.db
+*.sqlite
+*.sqlite3
+
+# IDEs & System files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Agent configurations
+.agents/
+.gemini/

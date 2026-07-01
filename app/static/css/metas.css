@@ -1,0 +1,73 @@
+.goal-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+    gap: 28px;
+}
+
+.goal-cover-card {
+    position: relative;
+    min-height: 460px;
+    border-radius: 36px;
+    overflow: hidden;
+    border: 1px solid rgba(226,201,133,.18);
+    box-shadow: 0 30px 86px rgba(0,0,0,.4);
+    background: rgba(255,250,240,.05);
+    transition: .32s ease;
+}
+
+.goal-cover-card:hover {
+    transform: translateY(-7px);
+    border-color: rgba(226,201,133,.36);
+}
+
+.goal-cover-bg {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    transform: scale(1.02);
+    transition: .7s ease;
+}
+
+.goal-cover-card:hover .goal-cover-bg {
+    transform: scale(1.09);
+}
+
+.goal-cover-overlay {
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(to bottom, rgba(7,17,12,.08), rgba(7,17,12,.52) 42%, rgba(7,17,12,.96));
+}
+
+.goal-cover-content {
+    position: relative;
+    z-index: 2;
+    height: 100%;
+    min-height: 460px;
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.goal-category-label {
+    font-size: .72rem;
+    letter-spacing: 2.8px;
+    text-transform: uppercase;
+    color: var(--gold-soft);
+    font-weight: 800;
+}
+
+.goal-title-cover {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 2.45rem;
+    line-height: .95;
+    color: var(--cream);
+}
+
+.goal-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}

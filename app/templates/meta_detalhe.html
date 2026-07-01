@@ -1,0 +1,1692 @@
+{% extends "layout.html" %}
+
+{% block title %}
+{{ meta.titulo }} | Ascend
+{% endblock %}
+
+{% block extra_css %}
+<link href="{{ url_for('static', filename='css/meta_detalhe.css') }}"
+      rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+
+{% if meta.cover_image %}
+    {% set cover = "uploads/" + meta.cover_image %}
+{% elif meta.categoria == "Carreira" %}
+    {% set cover = "img/covers/carreira.jpg" %}
+{% elif meta.categoria == "Estudos" %}
+    {% set cover = "img/covers/estudos.jpg" %}
+{% elif meta.categoria == "Saúde" %}
+    {% set cover = "img/covers/saude.jpg" %}
+{% elif meta.categoria == "Projetos" %}
+    {% set cover = "img/covers/projetos.jpg" %}
+{% elif meta.categoria == "Finanças" %}
+    {% set cover = "img/covers/financas.jpg" %}
+{% else %}
+    {% set cover = "img/covers/pessoal.jpg" %}
+{% endif %}
+
+{% set total_modulos = blocos_com_itens|length %}
+{% set total_conteudos = blocos_com_itens | map(attribute='itens') | map('length') | sum %}
+{% set total_trilhas = blocos_com_itens | map(attribute='progressos') | map('length') | sum %}
+
+{% set foco = namespace(acao=None, modulo=None, tipo=None) %}
+
+{% for grupo in blocos_com_itens %}
+
+    {% for item in grupo.itens %}
+
+        {% if foco.acao is none and item.tipo == "mini_meta" and item.meta_valor and (item.valor_atual or 0) < item.meta_valor %}
+            {% set foco.acao = item.titulo %}
+            {% set foco.modulo = grupo.bloco.titulo %}
+            {% set foco.tipo = "Meta Inteligente" %}
+        {% endif %}
+
+        {% if foco.acao is none and item.tipo == "mini_meta" and item.filhos %}
+            {% for filho in item.filhos %}
+                {% if foco.acao is none and not filho.concluido %}
+                    {% set foco.acao = filho.titulo %}
+                    {% set foco.modulo = grupo.bloco.titulo %}
+                    {% set foco.tipo = "Subtarefa" %}
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+
+    {% endfor %}
+
+    {% for progresso in grupo.progressos %}
+        {% for etapa in progresso.etapas %}
+            {% if foco.acao is none and not etapa.concluido %}
+                {% set foco.acao = etapa.titulo %}
+                {% set foco.modulo = grupo.bloco.titulo %}
+                {% set foco.tipo = "Trilha" %}
+            {% endif %}
+        {% endfor %}
+    {% endfor %}
+
+{% endfor %}
+
+<section class="goal-v2-hero">
+
+    <div class="goal-v2-bg"
+         style="background-image: url('{{ url_for('static', filename=cover) }}');">
+    </div>
+
+    <div class="goal-v2-overlay"></div>
+
+    <div class="goal-v2-content">
+
+        <div class="goal-v2-topbar">
+
+            <div class="d-flex flex-wrap gap-2">
+
+                <span class="badge-old">
+                    <i class="bi bi-compass"></i>
+                    Jornada
+                </span>
+
+                <span class="badge-old">
+                    <i class="bi bi-tag"></i>
+                    {{ meta.categoria }}
+                </span>
+
+                <span class="badge-old">
+                    <i class="bi bi-activity"></i>
+                    {{ meta.status }}
+                </span>
+
+            </div>
+
+            <div class="d-flex flex-wrap gap-2">
+
+                <a href="/metas"
+                   class="btn btn-ascend-outline">
+                    <i class="bi bi-arrow-left"></i>
+                    Voltar
+                </a>
+
+                <a href="/metas/editar/{{ meta.id }}"
+                   class="btn btn-ascend-outline">
+                    <i class="bi bi-pencil-square"></i>
+                    Editar
+                </a>
+
+            </div>
+
+        </div>
+
+        <div class="goal-v2-identity">
+
+            <div>
+
+                <p class="goal-v2-kicker">
+                    Ambiente de evolução
+                </p>
+
+                <h1 class="goal-v2-title">
+                    {{ meta.titulo }}
+                </h1>
+
+                {% if meta.descricao %}
+                    <p class="goal-v2-description">
+                        {{ meta.descricao }}
+                    </p>
+                {% endif %}
+
+            </div>
+
+            <div class="goal-v2-progress-orb">
+
+                <strong>
+                    {{ meta.progresso }}%
+                </strong>
+
+                <span>
+                    Evolução
+                </span>
+
+            </div>
+
+        </div>
+
+        <div class="goal-v2-progress-line">
+
+            <div class="d-flex justify-content-between mb-2">
+                <span>Progresso geral</span>
+                <strong>{{ meta.progresso }}%</strong>
+            </div>
+
+            <div class="progress">
+                <div class="progress-bar"
+                     style="width: {{ meta.progresso }}%;">
+                    {{ meta.progresso }}%
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+<section class="goal-focus-grid">
+
+    <article class="goal-focus-card goal-focus-primary">
+
+        <span class="badge-old mb-3">
+            <i class="bi bi-arrow-right-circle"></i>
+            Próxima ação
+        </span>
+
+        {% if foco.acao %}
+
+            <h2 class="goal-focus-title">
+                {{ foco.acao }}
+            </h2>
+
+            <p class="text-muted mb-3">
+                {{ foco.tipo }} dentro de <strong>{{ foco.modulo }}</strong>.
+            </p>
+
+            <button class="btn btn-ascend"
+                    onclick="abrirBlocoPorTitulo('{{ foco.modulo|e }}')">
+                <i class="bi bi-play-fill"></i>
+                Abrir módulo
+            </button>
+
+        {% else %}
+
+            <h2 class="goal-focus-title">
+                Nenhuma pendência encontrada
+            </h2>
+
+            <p class="text-muted mb-0">
+                Crie uma meta inteligente, subtarefa ou trilha para o Ascend destacar sua próxima ação.
+            </p>
+
+        {% endif %}
+
+    </article>
+
+    <article class="goal-focus-card">
+
+        <span>Módulos</span>
+        <strong>{{ total_modulos }}</strong>
+        <small>Áreas da jornada</small>
+
+    </article>
+
+    <article class="goal-focus-card">
+
+        <span>Metas</span>
+
+        {% set total_metas_inteligentes = namespace(valor=0) %}
+        {% for grupo in blocos_com_itens %}
+            {% for item in grupo.itens %}
+                {% if item.tipo == "mini_meta" %}
+                    {% set total_metas_inteligentes.valor = total_metas_inteligentes.valor + 1 %}
+                {% endif %}
+            {% endfor %}
+        {% endfor %}
+
+        <strong>{{ total_metas_inteligentes.valor }}</strong>
+        <small>Metas inteligentes</small>
+
+    </article>
+
+    <article class="goal-focus-card">
+
+        <span>Trilhas</span>
+        <strong>{{ total_trilhas }}</strong>
+        <small>Mapas de progresso</small>
+
+    </article>
+
+</section>
+
+<section class="goal-create-module">
+
+    <div>
+
+        <span class="badge-old mb-2">
+            <i class="bi bi-plus-circle"></i>
+            Nova área
+        </span>
+
+        <h2 class="ascend-title mb-2">
+            Criar área da jornada
+        </h2>
+
+        <p class="text-muted mb-0">
+            Separe sua jornada em áreas claras. Ex: Fundamentos, Projeto Final, Treino, Estudos, Execução.
+        </p>
+
+    </div>
+
+    <form method="POST"
+          action="/metas/{{ meta.id }}/bloco"
+          class="goal-create-form">
+
+        <input type="text"
+               name="titulo"
+               class="form-control"
+               placeholder="Nome da área"
+               required>
+
+        <input type="text"
+               name="descricao"
+               class="form-control"
+               placeholder="Descrição curta">
+
+        <button type="submit"
+                class="btn btn-ascend">
+            <i class="bi bi-plus-lg"></i>
+            Criar
+        </button>
+
+    </form>
+
+</section>
+
+{% if blocos_com_itens %}
+
+<section class="goal-areas-section">
+
+    <div class="goal-section-header">
+
+        <div>
+
+            <span class="goal-section-kicker">
+                Áreas da Jornada
+            </span>
+
+            <h2 class="goal-section-title">
+                Onde sua evolução acontece
+            </h2>
+
+        </div>
+
+    </div>
+
+    <div class="goal-areas-grid">
+
+        {% for grupo in blocos_com_itens %}
+
+            {% set smart_count = namespace(valor=0) %}
+            {% set biblioteca_count = namespace(valor=0) %}
+            {% set next_action = namespace(valor=None, tipo=None) %}
+
+            {% for item in grupo.itens %}
+
+                {% if item.tipo == "mini_meta" %}
+                    {% set smart_count.valor = smart_count.valor + 1 %}
+
+                    {% if next_action.valor is none and item.meta_valor and (item.valor_atual or 0) < item.meta_valor %}
+                        {% set next_action.valor = item.titulo %}
+                        {% set next_action.tipo = "Meta Inteligente" %}
+                    {% endif %}
+
+                    {% if next_action.valor is none and item.filhos %}
+                        {% for filho in item.filhos %}
+                            {% if next_action.valor is none and not filho.concluido %}
+                                {% set next_action.valor = filho.titulo %}
+                                {% set next_action.tipo = "Subtarefa" %}
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+
+                {% else %}
+                    {% set biblioteca_count.valor = biblioteca_count.valor + 1 %}
+                {% endif %}
+
+            {% endfor %}
+
+            {% for progresso in grupo.progressos %}
+                {% for etapa in progresso.etapas %}
+                    {% if next_action.valor is none and not etapa.concluido %}
+                        {% set next_action.valor = etapa.titulo %}
+                        {% set next_action.tipo = "Trilha" %}
+                    {% endif %}
+                {% endfor %}
+            {% endfor %}
+
+            <article class="goal-area-card"
+                     data-module-title="{{ grupo.bloco.titulo }}">
+
+                <div>
+
+                    <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+
+                        <span class="badge-old">
+                            <i class="bi bi-folder2"></i>
+                            Área
+                        </span>
+
+                        <span class="goal-area-percent">
+                            {{ grupo.media_progresso }}%
+                        </span>
+
+                    </div>
+
+                    <h3 class="goal-area-title">
+                        {{ grupo.bloco.titulo }}
+                    </h3>
+
+                    {% if grupo.bloco.descricao %}
+                        <p class="goal-area-desc">
+                            {{ grupo.bloco.descricao }}
+                        </p>
+                    {% endif %}
+
+                    <div class="goal-area-progress">
+
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Progresso</span>
+                            <strong>{{ grupo.media_progresso }}%</strong>
+                        </div>
+
+                        <div class="progress">
+                            <div class="progress-bar"
+                                 style="width: {{ grupo.media_progresso }}%;">
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="goal-area-next">
+
+                        <span>
+                            Próxima ação
+                        </span>
+
+                        <strong>
+                            {{ next_action.valor or "Nenhuma ação pendente" }}
+                        </strong>
+
+                        {% if next_action.tipo %}
+                            <small>{{ next_action.tipo }}</small>
+                        {% endif %}
+
+                    </div>
+
+                </div>
+
+                <div class="goal-area-footer">
+
+                    <div class="goal-area-metrics">
+
+                        <span>
+                            <i class="bi bi-bullseye"></i>
+                            {{ smart_count.valor }} metas
+                        </span>
+
+                        <span>
+                            <i class="bi bi-signpost-2"></i>
+                            {{ grupo.progressos|length }} trilhas
+                        </span>
+
+                        <span>
+                            <i class="bi bi-journal-bookmark"></i>
+                            {{ biblioteca_count.valor }} recursos
+                        </span>
+
+                    </div>
+
+                    <div class="d-flex gap-2">
+
+                        <button class="btn btn-ascend"
+                                onclick="abrirBloco('modal-bloco-{{ grupo.bloco.id }}')">
+                            <i class="bi bi-layout-sidebar-inset"></i>
+                            Workspace
+                        </button>
+
+                        <a href="/blocos/{{ grupo.bloco.id }}/excluir"
+                           class="btn btn-danger-old"
+                           onclick="return confirm('Excluir esta área e todos os itens?')">
+                            <i class="bi bi-trash3"></i>
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </article>
+
+            <div id="modal-bloco-{{ grupo.bloco.id }}"
+                 class="workspace-modal-overlay">
+
+                <div class="workspace-modal goal-workspace-modal">
+
+                    <header class="goal-workspace-header">
+
+                        <div>
+
+                            <span class="badge-old mb-3">
+                                <i class="bi bi-layout-sidebar-inset"></i>
+                                Workspace da Área
+                            </span>
+
+                            <h2 class="ascend-title mb-2">
+                                {{ grupo.bloco.titulo }}
+                            </h2>
+
+                            {% if grupo.bloco.descricao %}
+                                <p class="text-muted mb-0">
+                                    {{ grupo.bloco.descricao }}
+                                </p>
+                            {% endif %}
+
+                        </div>
+
+                        <button class="modal-close-btn"
+                                onclick="fecharBloco('modal-bloco-{{ grupo.bloco.id }}')">
+                            ×
+                        </button>
+
+                    </header>
+
+                    <div class="goal-workspace-layout">
+
+                        <aside class="goal-workspace-tabs">
+
+                            <button type="button"
+                                    class="workspace-tab active"
+                                    data-target="hoje-{{ grupo.bloco.id }}"
+                                    onclick="trocarAbaWorkspace(this)">
+                                <i class="bi bi-lightning-charge"></i>
+                                Hoje
+                            </button>
+
+                            <button type="button"
+                                    class="workspace-tab"
+                                    data-target="metas-{{ grupo.bloco.id }}"
+                                    onclick="trocarAbaWorkspace(this)">
+                                <i class="bi bi-bullseye"></i>
+                                Metas
+                            </button>
+
+                            <button type="button"
+                                    class="workspace-tab"
+                                    data-target="trilhas-{{ grupo.bloco.id }}"
+                                    onclick="trocarAbaWorkspace(this)">
+                                <i class="bi bi-signpost-2"></i>
+                                Trilhas
+                            </button>
+
+                            <button type="button"
+                                    class="workspace-tab"
+                                    data-target="biblioteca-{{ grupo.bloco.id }}"
+                                    onclick="trocarAbaWorkspace(this)">
+                                <i class="bi bi-journal-bookmark"></i>
+                                Biblioteca
+                            </button>
+
+                        </aside>
+
+                        <main class="goal-workspace-content">
+
+                            <section id="hoje-{{ grupo.bloco.id }}"
+                                     class="workspace-panel active">
+
+                                <div class="workspace-panel-header">
+
+                                    <span class="badge-old mb-2">
+                                        <i class="bi bi-lightning-charge"></i>
+                                        Hoje
+                                    </span>
+
+                                    <h3 class="ascend-title mb-2">
+                                        Seu próximo movimento
+                                    </h3>
+
+                                    <p class="text-muted mb-0">
+                                        Ações principais para avançar esta área sem se perder.
+                                    </p>
+
+                                </div>
+
+                                <div class="today-focus-card">
+
+                                    <span>Próxima ação</span>
+
+                                    <strong>
+                                        {{ next_action.valor or "Crie uma meta, tarefa ou trilha para começar." }}
+                                    </strong>
+
+                                    {% if next_action.tipo %}
+                                        <small>{{ next_action.tipo }}</small>
+                                    {% endif %}
+
+                                </div>
+
+                                <div class="workspace-section-title">
+                                    Metas inteligentes ativas
+                                </div>
+
+                                <div class="smart-goal-grid">
+
+                                    {% for item in grupo.itens %}
+                                        {% if item.tipo == "mini_meta" %}
+                                            {% include "partials/smart_goal_card.html" ignore missing %}
+                                        {% endif %}
+                                    {% endfor %}
+
+                                </div>
+
+                                <div class="workspace-section-title">
+                                    Trilhas em andamento
+                                </div>
+
+                                {% for progresso in grupo.progressos %}
+
+                                    <div class="compact-progress-card">
+
+                                        <div class="d-flex justify-content-between align-items-start gap-3">
+
+                                            <div>
+                                                <strong>{{ progresso.titulo }}</strong>
+
+                                                {% if progresso.descricao %}
+                                                    <p>{{ progresso.descricao }}</p>
+                                                {% endif %}
+                                            </div>
+
+                                            <span>{{ progresso.percentual() }}%</span>
+
+                                        </div>
+
+                                        <div class="progress mt-3">
+                                            <div class="progress-bar"
+                                                 style="width: {{ progresso.percentual() }}%;">
+                                            </div>
+                                        </div>
+
+                                    </div>
+
+                                {% endfor %}
+
+                            </section>
+
+                            <section id="metas-{{ grupo.bloco.id }}"
+                                     class="workspace-panel">
+
+                                <div class="workspace-panel-header">
+
+                                    <span class="badge-old mb-2">
+                                        <i class="bi bi-bullseye"></i>
+                                        Metas Inteligentes
+                                    </span>
+
+                                    <h3 class="ascend-title mb-2">
+                                        Hábitos, indicadores e objetivos
+                                    </h3>
+
+                                    <p class="text-muted mb-0">
+                                        Tudo que exige registro de progresso ou subtarefas fica aqui.
+                                    </p>
+
+                                </div>
+
+                                <details class="mb-4">
+                                    <summary class="btn btn-ascend-outline btn-sm mb-2" style="list-style: none; display: inline-block; cursor: pointer;">
+                                        <i class="bi bi-plus-lg"></i> Nova Meta Inteligente
+                                    </summary>
+                                    <div class="creation-card p-4 mt-2" style="border: 1px solid var(--border-color); border-radius: 8px; background: rgba(255,255,255,0.03);">
+                                        <form method="POST" action="/blocos/{{ grupo.bloco.id }}/item">
+                                            <input type="hidden" name="tipo" value="mini_meta">
+                                            <input type="text" name="titulo" class="form-control mb-3" placeholder="Nome da meta. Ex: Ler livro, Fazer treinos" required>
+                                            <textarea name="conteudo" class="form-control mb-3" rows="3" placeholder="Descrição da meta (opcional)"></textarea>
+                                            <div class="row">
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="form-label text-muted small">Frequência</label>
+                                                    <select name="frequencia" class="form-select">
+                                                        <option value="unica">Objetivo único</option>
+                                                        <option value="diaria">Hábito diário</option>
+                                                        <option value="semanal">Hábito semanal</option>
+                                                        <option value="mensal">Hábito mensal</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="form-label text-muted small">Meta Numérica (Opcional)</label>
+                                                    <input type="number" name="meta_valor" class="form-control" min="1" placeholder="Ex: 10, 30 (deixe em branco se for checklists)">
+                                                </div>
+                                            </div>
+                                            <button type="submit" class="btn btn-ascend">
+                                                <i class="bi bi-plus-lg"></i> Criar Meta
+                                            </button>
+                                        </form>
+                                    </div>
+                                </details>
+
+                                <div class="smart-goal-grid">
+
+                                    {% for item in grupo.itens %}
+                                        {% if item.tipo == "mini_meta" %}
+
+                                            <article class="smart-goal-card">
+
+                                                <div class="smart-goal-head">
+
+                                                    <div>
+
+                                                        <span class="badge-old mb-2">
+                                                            <i class="bi bi-bullseye"></i>
+                                                            Meta Inteligente
+                                                        </span>
+
+                                                        <h4>
+                                                            {{ item.titulo }}
+                                                        </h4>
+
+                                                        {% if item.conteudo %}
+                                                            <p>{{ item.conteudo }}</p>
+                                                        {% endif %}
+
+                                                    </div>
+
+                                                    {% if item.meta_valor %}
+                                                        {% set progresso_meta = ((item.valor_atual or 0) / item.meta_valor * 100) | round(0) %}
+                                                        <span class="smart-goal-percent">{{ progresso_meta }}%</span>
+                                                    {% else %}
+                                                        <span class="smart-goal-percent">{{ item.percentual() }}%</span>
+                                                    {% endif %}
+
+                                                </div>
+
+                                                <div class="smart-goal-badges">
+
+                                                    <span>
+                                                        <i class="bi bi-repeat"></i>
+                                                        {% if item.frequencia == "diaria" %}
+                                                            Diária
+                                                        {% elif item.frequencia == "semanal" %}
+                                                            Semanal
+                                                        {% elif item.frequencia == "mensal" %}
+                                                            Mensal
+                                                        {% else %}
+                                                            Objetivo único
+                                                        {% endif %}
+                                                    </span>
+
+                                                    <span>
+                                                        <i class="bi bi-fire"></i>
+                                                        {{ item.temperatura()|capitalize }}
+                                                    </span>
+
+                                                    {% if item.meta_valor %}
+                                                        <span>
+                                                            <i class="bi bi-graph-up-arrow"></i>
+                                                            {{ item.valor_atual or 0 }}/{{ item.meta_valor }}
+                                                        </span>
+                                                    {% else %}
+                                                        <span>
+                                                            <i class="bi bi-list-check"></i>
+                                                            {{ item.filhos_concluidos() }}/{{ item.total_filhos() }}
+                                                        </span>
+                                                    {% endif %}
+
+                                                </div>
+
+                                                <div class="smart-goal-progress">
+
+                                                    <div class="d-flex justify-content-between mb-2">
+
+                                                        <span>Progresso</span>
+
+                                                        {% if item.meta_valor %}
+                                                            <strong>{{ item.valor_atual or 0 }}/{{ item.meta_valor }}</strong>
+                                                        {% else %}
+                                                            <strong>{{ item.filhos_concluidos() }}/{{ item.total_filhos() }}</strong>
+                                                        {% endif %}
+
+                                                    </div>
+
+                                                    <div class="progress">
+
+                                                        {% if item.meta_valor %}
+                                                            {% set progresso_meta = ((item.valor_atual or 0) / item.meta_valor * 100) | round(0) %}
+
+                                                            <div class="progress-bar"
+                                                                 style="width: {{ progresso_meta }}%;">
+                                                                {{ progresso_meta }}%
+                                                            </div>
+                                                        {% else %}
+                                                            <div class="progress-bar"
+                                                                 style="width: {{ item.percentual() }}%;">
+                                                                 {{ item.percentual() }}%
+                                                            </div>
+                                                        {% endif %}
+
+                                                    </div>
+
+                                                </div>
+
+                                                {% if item.meta_valor %}
+
+                                                    <div class="smart-goal-actions">
+
+                                                        <a href="/metas-inteligentes/{{ item.id }}/reduzir?tab=metas"
+                                                           class="btn btn-ascend-outline btn-sm">
+                                                            <i class="bi bi-dash-lg"></i>
+                                                        </a>
+
+                                                        <a href="/metas-inteligentes/{{ item.id }}/incrementar?tab=metas"
+                                                           class="btn btn-ascend btn-sm">
+                                                            <i class="bi bi-plus-lg"></i>
+                                                            Registrar
+                                                        </a>
+
+                                                    </div>
+
+                                                {% endif %}
+
+                                                {% if item.filhos or not item.meta_valor %}
+
+                                                    <div class="child-task-list mt-3">
+
+                                                        {% for filho in item.filhos %}
+
+                                                            <div class="child-task">
+
+                                                                <a href="/itens/{{ filho.id }}/alternar?tab=metas"
+                                                                   class="child-task-link">
+
+                                                                    {% if filho.concluido %}
+                                                                        <i class="bi bi-check-circle-fill text-success"></i>
+                                                                    {% else %}
+                                                                        <i class="bi bi-circle"></i>
+                                                                    {% endif %}
+
+                                                                    <span class="{% if filho.concluido %}text-decoration-line-through text-muted{% endif %}">
+                                                                        {{ filho.titulo }}
+                                                                    </span>
+
+                                                                </a>
+
+                                                                <a href="/itens/{{ filho.id }}/excluir"
+                                                                   class="btn btn-danger-old btn-sm"
+                                                                   onclick="return confirm('Excluir esta subtarefa?')">
+                                                                    <i class="bi bi-trash3"></i>
+                                                                </a>
+
+                                                            </div>
+
+                                                        {% endfor %}
+
+                                                    </div>
+
+                                                    <form method="POST"
+                                                          action="/itens/{{ item.id }}/filho"
+                                                          class="mt-3">
+
+                                                        <div class="input-group">
+
+                                                            <input type="text"
+                                                                   name="titulo"
+                                                                   class="form-control"
+                                                                   placeholder="Nova subtarefa"
+                                                                   required>
+
+                                                            <button class="btn btn-ascend">
+                                                                <i class="bi bi-plus-lg"></i>
+                                                            </button>
+
+                                                        </div>
+
+                                                    </form>
+
+                                                {% endif %}
+
+                                                <div class="mt-3 d-flex gap-2 flex-wrap">
+
+                                                    <details style="display: inline-block; width: 100%;">
+                                                        <summary class="btn btn-ascend-outline btn-sm" style="list-style: none; display: inline-block; cursor: pointer;">
+                                                            <i class="bi bi-pencil-square"></i> Editar
+                                                        </summary>
+                                                        <div class="mt-3 p-3 edit-form-container" style="border: 1px solid var(--border-color); border-radius: 8px; background: rgba(255,255,255,0.02); text-align: left;">
+                                                            <form method="POST" action="/itens/{{ item.id }}/editar">
+                                                                <div class="mb-3">
+                                                                    <label class="form-label small text-muted">Título</label>
+                                                                    <input type="text" name="titulo" class="form-control" value="{{ item.titulo }}" required>
+                                                                </div>
+                                                                <div class="mb-3">
+                                                                    <label class="form-label small text-muted">Descrição</label>
+                                                                    <textarea name="conteudo" class="form-control" rows="2">{{ item.conteudo or '' }}</textarea>
+                                                                </div>
+                                                                <div class="row">
+                                                                    <div class="col-6 mb-3">
+                                                                        <label class="form-label small text-muted">Frequência</label>
+                                                                        <select name="frequencia" class="form-select">
+                                                                            <option value="unica" {% if item.frequencia == 'unica' %}selected{% endif %}>Única</option>
+                                                                            <option value="diaria" {% if item.frequencia == 'diaria' %}selected{% endif %}>Diária</option>
+                                                                            <option value="semanal" {% if item.frequencia == 'semanal' %}selected{% endif %}>Semanal</option>
+                                                                            <option value="mensal" {% if item.frequencia == 'mensal' %}selected{% endif %}>Mensal</option>
+                                                                        </select>
+                                                                    </div>
+                                                                    <div class="col-6 mb-3">
+                                                                        <label class="form-label small text-muted">Meta Numérica</label>
+                                                                        <input type="number" name="meta_valor" class="form-control" value="{{ item.meta_valor or '' }}" min="1">
+                                                                    </div>
+                                                                </div>
+                                                                <button type="submit" class="btn btn-ascend btn-sm">Salvar</button>
+                                                            </form>
+                                                        </div>
+                                                    </details>
+
+                                                    <a href="/itens/{{ item.id }}/excluir"
+                                                       class="btn btn-danger-old btn-sm"
+                                                       onclick="return confirm('Excluir esta meta inteligente?')">
+                                                        <i class="bi bi-trash3"></i>
+                                                        Excluir
+                                                    </a>
+
+                                                </div>
+
+                                            </article>
+
+                                        {% endif %}
+                                    {% endfor %}
+
+                                </div>
+
+                            </section>
+
+                            <section id="trilhas-{{ grupo.bloco.id }}"
+                                     class="workspace-panel">
+
+                                <div class="workspace-panel-header">
+
+                                    <span class="badge-old mb-2">
+                                        <i class="bi bi-signpost-2"></i>
+                                        Trilhas
+                                    </span>
+
+                                    <h3 class="ascend-title mb-2">
+                                        Marcos de progresso
+                                    </h3>
+
+                                    <p class="text-muted mb-0">
+                                        Etapas sequenciais para acompanhar evolução real.
+                                    </p>
+
+                                </div>
+
+                                <details class="mb-4">
+                                    <summary class="btn btn-ascend-outline btn-sm mb-2" style="list-style: none; display: inline-block; cursor: pointer;">
+                                        <i class="bi bi-plus-lg"></i> Nova Trilha
+                                    </summary>
+                                    <div class="creation-card p-4 mt-2" style="border: 1px solid var(--border-color); border-radius: 8px; background: rgba(255,255,255,0.03);">
+                                        <form method="POST" action="/blocos/{{ grupo.bloco.id }}/progresso">
+                                            <input type="text" name="titulo" class="form-control mb-3" placeholder="Nome da trilha. Ex: Grade Curricular, Cronograma" required>
+                                            <input type="text" name="unidade" class="form-control mb-3" placeholder="Unidade. Ex: aulas, etapas (opcional)">
+                                            <input type="text" name="descricao" class="form-control mb-3" placeholder="Descrição curta (opcional)">
+                                            <textarea name="etapas" class="form-control mb-3" rows="5" placeholder="Digite uma etapa por linha (Ex: Aula 1, Aula 2)"></textarea>
+                                            <button type="submit" class="btn btn-ascend">
+                                                <i class="bi bi-plus-lg"></i> Criar Trilha
+                                            </button>
+                                        </form>
+                                    </div>
+                                </details>
+
+                                {% for progresso in grupo.progressos %}
+
+                                    <div class="progress-tracker-premium">
+
+                                        <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+
+                                            <div>
+
+                                                <span class="badge-old mb-2">
+                                                    <i class="bi bi-bar-chart-line"></i>
+                                                    {{ progresso.unidade or "etapas" }}
+                                                </span>
+
+                                                <h4 class="ascend-title">
+                                                    {{ progresso.titulo }}
+                                                </h4>
+
+                                                {% if progresso.descricao %}
+                                                    <p class="text-muted">
+                                                        {{ progresso.descricao }}
+                                                    </p>
+                                                {% endif %}
+
+                                            </div>
+
+                                            <a href="/progressos/{{ progresso.id }}/excluir"
+                                               class="btn btn-danger-old"
+                                               onclick="return confirm('Excluir esta trilha?')">
+                                                <i class="bi bi-trash3"></i>
+                                            </a>
+
+                                        </div>
+
+                                        <div class="mt-4">
+
+                                            <div class="d-flex justify-content-between mb-2">
+                                                <span class="text-muted">Progresso</span>
+                                                <strong>{{ progresso.percentual() }}%</strong>
+                                            </div>
+
+                                            <div class="progress">
+                                                <div class="progress-bar"
+                                                     style="width: {{ progresso.percentual() }}%;">
+                                                    {{ progresso.percentual() }}%
+                                                </div>
+                                            </div>
+
+                                        </div>
+
+                                        <form method="POST"
+                                              action="/progressos/{{ progresso.id }}/etapa"
+                                              class="mt-4">
+
+                                            <div class="row g-2">
+
+                                                <div class="col-md-7">
+                                                    <input type="text"
+                                                           name="titulo"
+                                                           class="form-control"
+                                                           placeholder="Nova etapa"
+                                                           required>
+                                                </div>
+
+                                                <div class="col-md-3">
+                                                    <input type="text"
+                                                           name="descricao"
+                                                           class="form-control"
+                                                           placeholder="Descrição">
+                                                </div>
+
+                                                <div class="col-md-2">
+                                                    <button type="submit"
+                                                            class="btn btn-ascend w-100">
+                                                        <i class="bi bi-plus-lg"></i>
+                                                    </button>
+                                                </div>
+
+                                            </div>
+
+                                        </form>
+
+                                        {% if progresso.etapas %}
+
+                                            <div class="ascend-timeline">
+
+                                                {% for etapa in progresso.etapas %}
+
+                                                    <div class="timeline-item">
+
+                                                        <div class="timeline-dot {% if etapa.concluido %}completed{% endif %}">
+
+                                                            {% if etapa.concluido %}
+                                                                <i class="bi bi-check-lg"></i>
+                                                            {% endif %}
+
+                                                        </div>
+
+                                                        <div class="d-flex justify-content-between align-items-start gap-3">
+
+                                                            <div>
+
+                                                                <div class="timeline-title {% if etapa.concluido %}completed{% endif %}">
+                                                                    {{ etapa.titulo }}
+                                                                </div>
+
+                                                                {% if etapa.descricao %}
+                                                                    <div class="timeline-description">
+                                                                        {{ etapa.descricao }}
+                                                                    </div>
+                                                                {% endif %}
+
+                                                            </div>
+
+                                                            <div class="timeline-actions">
+
+                                                                <a href="/etapas/{{ etapa.id }}/alternar"
+                                                                   class="btn btn-ascend-outline btn-sm">
+                                                                    <i class="bi bi-check2"></i>
+                                                                </a>
+
+                                                                <a href="/etapas/{{ etapa.id }}/excluir"
+                                                                   class="btn btn-danger-old btn-sm"
+                                                                   onclick="return confirm('Excluir esta etapa?')">
+                                                                    <i class="bi bi-trash3"></i>
+                                                                </a>
+
+                                                            </div>
+
+                                                        </div>
+
+                                                    </div>
+
+                                                {% endfor %}
+
+                                            </div>
+
+                                        {% endif %}
+
+                                    </div>
+
+                                {% else %}
+
+                                    <div class="workspace-empty-state">
+                                        <i class="bi bi-signpost-2"></i>
+                                        <strong>Nenhuma trilha criada</strong>
+                                        <span>Use a aba Criar para adicionar uma trilha de evolução.</span>
+                                    </div>
+
+                                {% endfor %}
+
+                            </section>
+
+                            <section id="biblioteca-{{ grupo.bloco.id }}"
+                                     class="workspace-panel">
+
+                                <div class="workspace-panel-header">
+
+                                    <span class="badge-old mb-2">
+                                        <i class="bi bi-journal-bookmark"></i>
+                                        Biblioteca
+                                    </span>
+
+                                    <h3 class="ascend-title mb-2">
+                                        Recursos e anotações
+                                    </h3>
+
+                                    <p class="text-muted mb-0">
+                                        Textos, links, arquivos, datas, métricas e checklists ficam aqui.
+                                    </p>
+
+                                </div>
+
+                                <details class="mb-4">
+                                    <summary class="btn btn-ascend-outline btn-sm mb-2" style="list-style: none; display: inline-block; cursor: pointer;">
+                                        <i class="bi bi-plus-lg"></i> Novo Recurso
+                                    </summary>
+                                    <div class="creation-card p-4 mt-2" style="border: 1px solid var(--border-color); border-radius: 8px; background: rgba(255,255,255,0.03);">
+                                        <form method="POST" action="/blocos/{{ grupo.bloco.id }}/item" enctype="multipart/form-data">
+                                            <div class="content-shortcuts mb-3 d-flex flex-wrap gap-2">
+                                                <button type="button" class="btn btn-ascend-outline btn-sm tipo-btn active" data-tipo="texto" onclick="selecionarTipoConteudo(this)">
+                                                    <i class="bi bi-text-left"></i> Texto
+                                                </button>
+                                                <button type="button" class="btn btn-ascend-outline btn-sm tipo-btn" data-tipo="checklist" onclick="selecionarTipoConteudo(this)">
+                                                    <i class="bi bi-check2-square"></i> Checklist
+                                                </button>
+                                                <button type="button" class="btn btn-ascend-outline btn-sm tipo-btn" data-tipo="link" onclick="selecionarTipoConteudo(this)">
+                                                    <i class="bi bi-link-45deg"></i> Link
+                                                </button>
+                                                <button type="button" class="btn btn-ascend-outline btn-sm tipo-btn" data-tipo="arquivo" onclick="selecionarTipoConteudo(this)">
+                                                    <i class="bi bi-paperclip"></i> Arquivo
+                                                </button>
+                                                <button type="button" class="btn btn-ascend-outline btn-sm tipo-btn" data-tipo="metrica" onclick="selecionarTipoConteudo(this)">
+                                                    <i class="bi bi-bar-chart"></i> Métrica
+                                                </button>
+                                                <button type="button" class="btn btn-ascend-outline btn-sm tipo-btn" data-tipo="data" onclick="selecionarTipoConteudo(this)">
+                                                    <i class="bi bi-calendar-event"></i> Data
+                                                </button>
+                                            </div>
+
+                                            <select name="tipo" class="form-select tipo-conteudo d-none" onchange="trocarTipoConteudo(this)" required>
+                                                <option value="texto" selected>Texto</option>
+                                                <option value="checklist">Checklist</option>
+                                                <option value="data">Data</option>
+                                                <option value="metrica">Métrica</option>
+                                                <option value="link">Link</option>
+                                                <option value="arquivo">Arquivo</option>
+                                            </select>
+
+                                            <div class="campo-tipo campo-texto">
+                                                <input type="text" name="titulo" class="form-control mb-3" placeholder="Título">
+                                                <textarea name="conteudo" class="form-control" rows="4" placeholder="Escreva sua anotação"></textarea>
+                                            </div>
+
+                                            <div class="campo-tipo campo-checklist d-none">
+                                                <input type="text" name="titulo_checklist" class="form-control mb-3" placeholder="Título do Checklist">
+                                                <select name="subtipo_checklist" class="form-select mb-3">
+                                                    <option value="checkbox">Caixas de seleção</option>
+                                                    <option value="radio">Múltipla escolha</option>
+                                                    <option value="dropdown">Lista suspensa</option>
+                                                    <option value="escala">Escala</option>
+                                                </select>
+                                                <textarea name="opcoes_checklist" class="form-control" rows="5" placeholder="Digite uma opção por linha"></textarea>
+                                            </div>
+
+                                            <div class="campo-tipo campo-data d-none">
+                                                <input type="text" name="titulo" class="form-control mb-3" placeholder="Título">
+                                                <input type="date" name="data_item" class="form-control">
+                                            </div>
+
+                                            <div class="campo-tipo campo-metrica d-none">
+                                                <input type="text" name="titulo" class="form-control mb-3" placeholder="Métrica. Ex: Peso, Altura">
+                                                <input type="text" name="valor" class="form-control" placeholder="Valor">
+                                            </div>
+
+                                            <div class="campo-tipo campo-link d-none">
+                                                <input type="text" name="titulo" class="form-control mb-3" placeholder="Título">
+                                                <input type="url" name="conteudo" class="form-control" placeholder="https://...">
+                                            </div>
+
+                                            <div class="campo-tipo campo-arquivo d-none">
+                                                <input type="text" name="titulo" class="form-control mb-3" placeholder="Título">
+                                                <input type="file" name="arquivo" class="form-control">
+                                            </div>
+
+                                            <button type="submit" class="btn btn-ascend mt-3">
+                                                <i class="bi bi-plus-lg"></i> Adicionar Recurso
+                                            </button>
+                                        </form>
+                                    </div>
+                                </details>
+
+                                <div class="library-grid">
+
+                                    {% for item in grupo.itens %}
+
+                                        {% if item.tipo != "mini_meta" %}
+
+                                            <article class="library-item-card">
+
+                                                {% if item.tipo == "texto" %}
+
+                                                    <h4>
+                                                        <i class="bi bi-journal-text"></i>
+                                                        {{ item.titulo }}
+                                                    </h4>
+
+                                                    <p>{{ item.conteudo }}</p>
+
+                                                {% elif item.tipo == "checklist" %}
+
+                                                    <h4>
+                                                        <i class="bi bi-ui-checks"></i>
+                                                        {{ item.titulo }}
+                                                    </h4>
+
+                                                    {% for opcao in item.opcoes %}
+
+                                                        <a href="/opcoes/{{ opcao.id }}/alternar"
+                                                           class="forms-clickable-option d-block mb-2">
+
+                                                            {% if opcao.selecionado %}
+                                                                <i class="bi bi-check-square-fill"></i>
+                                                            {% else %}
+                                                                <i class="bi bi-square"></i>
+                                                            {% endif %}
+
+                                                            {{ opcao.texto }}
+
+                                                        </a>
+
+                                                    {% endfor %}
+
+                                                    <form method="POST" action="/opcoes/{{ item.id }}/adicionar" class="mt-3">
+                                                        <div class="input-group">
+                                                            <input type="text" name="texto" class="form-control form-control-sm" placeholder="Nova opção" required>
+                                                            <button class="btn btn-ascend btn-sm">
+                                                                <i class="bi bi-plus-lg"></i>
+                                                            </button>
+                                                        </div>
+                                                    </form>
+
+                                                {% elif item.tipo == "data" %}
+
+                                                    <h4>
+                                                        <i class="bi bi-calendar-event"></i>
+                                                        {{ item.titulo }}
+                                                    </h4>
+
+                                                    {% if item.data_item %}
+                                                        <p>{{ item.data_item.strftime("%d/%m/%Y") }}</p>
+                                                    {% endif %}
+
+                                                {% elif item.tipo == "metrica" %}
+
+                                                    <h4>
+                                                        <i class="bi bi-bar-chart"></i>
+                                                        {{ item.titulo }}
+                                                    </h4>
+
+                                                    <strong class="metric-value">
+                                                        {{ item.valor }}
+                                                    </strong>
+
+                                                {% elif item.tipo == "link" %}
+
+                                                    <h4>
+                                                        <i class="bi bi-link-45deg"></i>
+                                                        {{ item.titulo }}
+                                                    </h4>
+
+                                                    <a href="{{ item.conteudo }}"
+                                                       target="_blank"
+                                                       class="gold-text fw-bold">
+                                                        Abrir link
+                                                    </a>
+
+                                                {% elif item.tipo == "arquivo" %}
+
+                                                    <h4>
+                                                        <i class="bi bi-paperclip"></i>
+                                                        {{ item.titulo }}
+                                                    </h4>
+
+                                                    {% if item.arquivo %}
+                                                        <a href="{{ url_for('static', filename='uploads/' + item.arquivo) }}"
+                                                           target="_blank"
+                                                           class="gold-text fw-bold">
+                                                            Abrir arquivo
+                                                        </a>
+                                                    {% endif %}
+
+                                                {% endif %}
+
+                                                <div class="mt-3 d-flex gap-2 flex-wrap">
+
+                                                    <details style="display: inline-block; width: 100%;">
+                                                        <summary class="btn btn-ascend-outline btn-sm" style="list-style: none; display: inline-block; cursor: pointer;">
+                                                            <i class="bi bi-pencil-square"></i> Editar
+                                                        </summary>
+                                                        <div class="mt-3 p-3 edit-form-container" style="border: 1px solid var(--border-color); border-radius: 8px; background: rgba(255,255,255,0.02); text-align: left;">
+                                                            <form method="POST" action="/itens/{{ item.id }}/editar" enctype="multipart/form-data">
+                                                                <div class="mb-3">
+                                                                    <label class="form-label small text-muted">Título</label>
+                                                                    <input type="text" name="titulo" class="form-control" value="{{ item.titulo }}" required>
+                                                                </div>
+                                                                {% if item.tipo == "texto" or item.tipo == "link" %}
+                                                                    <div class="mb-3">
+                                                                        <label class="form-label small text-muted">Conteúdo / Link</label>
+                                                                        <textarea name="conteudo" class="form-control" rows="3">{{ item.conteudo or '' }}</textarea>
+                                                                    </div>
+                                                                {% elif item.tipo == "metrica" %}
+                                                                    <div class="mb-3">
+                                                                        <label class="form-label small text-muted">Valor</label>
+                                                                        <input type="text" name="valor" class="form-control" value="{{ item.valor or '' }}">
+                                                                    </div>
+                                                                {% elif item.tipo == "data" %}
+                                                                    <div class="mb-3">
+                                                                        <label class="form-label small text-muted">Data</label>
+                                                                        <input type="date" name="data_item" class="form-control" value="{{ item.data_item or '' }}">
+                                                                    </div>
+                                                                {% elif item.tipo == "arquivo" %}
+                                                                    <div class="mb-3">
+                                                                        <label class="form-label small text-muted">Substituir Arquivo</label>
+                                                                        <input type="file" name="arquivo" class="form-control">
+                                                                    </div>
+                                                                {% endif %}
+                                                                <button type="submit" class="btn btn-ascend btn-sm">Salvar</button>
+                                                            </form>
+                                                        </div>
+                                                    </details>
+
+                                                    <a href="/itens/{{ item.id }}/excluir"
+                                                       class="btn btn-danger-old btn-sm"
+                                                       onclick="return confirm('Excluir este item?')">
+                                                        <i class="bi bi-trash3"></i>
+                                                        Excluir
+                                                    </a>
+
+                                                </div>
+
+                                            </article>
+
+                                        {% endif %}
+
+                                    {% else %}
+
+                                        <div class="workspace-empty-state">
+                                            <i class="bi bi-journal-bookmark"></i>
+                                            <strong>Nenhum recurso criado</strong>
+                                            <span>Use o botão Novo Recurso para adicionar textos, links, arquivos ou checklists.</span>
+                                        </div>
+
+                                    {% endfor %}
+
+                                </div>
+
+                            </section>
+
+
+
+                        </main>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        {% endfor %}
+
+    </div>
+
+</section>
+
+{% else %}
+
+<section class="goal-empty-state">
+
+    <i class="bi bi-folder2-open"></i>
+
+    <h2 class="ascend-title mt-4">
+        Nenhuma área criada
+    </h2>
+
+    <p class="text-muted">
+        Crie sua primeira área da jornada para começar a organizar sua evolução.
+    </p>
+
+</section>
+
+{% endif %}
+
+<script>
+let modalAtivo = null;
+
+function abrirBloco(id) {
+    const modal = document.getElementById(id);
+
+    if (!modal) {
+        return;
+    }
+
+    modal.classList.add("active");
+    modalAtivo = modal;
+    document.body.style.overflow = "hidden";
+}
+
+function abrirBlocoPorTitulo(titulo) {
+    const cards = document.querySelectorAll("[data-module-title]");
+
+    for (const card of cards) {
+        if (card.dataset.moduleTitle === titulo) {
+            const button = card.querySelector("button[onclick^='abrirBloco']");
+            if (button) {
+                button.click();
+            }
+            return;
+        }
+    }
+}
+
+function fecharBloco(id) {
+    const modal = document.getElementById(id);
+
+    if (!modal) {
+        return;
+    }
+
+    modal.classList.remove("active");
+    modalAtivo = null;
+    document.body.style.overflow = "";
+}
+
+function fecharModalAtivo() {
+    if (!modalAtivo) {
+        return;
+    }
+
+    modalAtivo.classList.remove("active");
+    modalAtivo = null;
+    document.body.style.overflow = "";
+}
+
+function trocarAbaWorkspace(botao) {
+    const modal = botao.closest(".workspace-modal");
+    const targetId = botao.dataset.target;
+
+    modal.querySelectorAll(".workspace-tab").forEach(item => {
+        item.classList.remove("active");
+    });
+
+    modal.querySelectorAll(".workspace-panel").forEach(panel => {
+        panel.classList.remove("active");
+    });
+
+    botao.classList.add("active");
+
+    const panel = modal.querySelector("#" + targetId);
+
+    if (panel) {
+        panel.classList.add("active");
+    }
+}
+
+function selecionarTipoConteudo(botao) {
+    const tipo = botao.dataset.tipo;
+    const form = botao.closest("form");
+    const select = form.querySelector(".tipo-conteudo");
+
+    if (select) {
+        select.value = tipo;
+        trocarTipoConteudo(select);
+    }
+
+    const botoes = form.querySelectorAll(".tipo-btn");
+
+    botoes.forEach(item => {
+        item.classList.remove("active");
+    });
+
+    botao.classList.add("active");
+}
+
+function trocarTipoConteudo(select) {
+    const form = select.closest("form");
+    const campos = form.querySelectorAll(".campo-tipo");
+
+    campos.forEach(campo => {
+        campo.classList.add("d-none");
+    });
+
+    const tipo = select.value;
+    const campoSelecionado = form.querySelector(".campo-" + tipo);
+
+    if (campoSelecionado) {
+        campoSelecionado.classList.remove("d-none");
+    }
+}
+
+document.addEventListener("keydown", function(event) {
+    if (event.key === "Escape") {
+        fecharModalAtivo();
+    }
+});
+
+document.addEventListener("DOMContentLoaded", function() {
+    document.querySelectorAll(".workspace-modal-overlay").forEach(function(overlay) {
+        overlay.addEventListener("click", function(event) {
+            if (event.target === overlay) {
+                fecharBloco(overlay.id);
+            }
+        });
+    });
+
+    // Interceptar cliques em links de ações (incrementar, reduzir, alternar) para evitar recarregamento
+    document.addEventListener("click", function(event) {
+        const link = event.target.closest('a');
+        if (!link) return;
+        
+        const href = link.getAttribute('href');
+        if (!href) return;
+        
+        const isAction = href.includes("/incrementar") || 
+                         href.includes("/reduzir") || 
+                         href.includes("/alternar");
+                         
+        if (isAction) {
+            event.preventDefault();
+            
+            // Adiciona ajax=1 ao URL
+            const url = new URL(href, window.location.origin);
+            url.searchParams.set("ajax", "1");
+            
+            fetch(url.toString())
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // 1. Atualiza o progresso geral da jornada no topo da página
+                        const globalProgressBars = document.querySelectorAll(".journey-header-progress .progress-bar, .goal-progress-section .progress-bar");
+                        globalProgressBars.forEach(bar => {
+                            bar.style.width = data.meta_progresso + "%";
+                            bar.innerText = data.meta_progresso + "%";
+                        });
+                        const globalProgressText = document.querySelector(".journey-header-progress strong, .goal-progress-section strong");
+                        if (globalProgressText) {
+                            globalProgressText.innerText = data.meta_progresso + "%";
+                        }
+                        
+                        // 2. Atualiza o progresso da área de foco correspondente (background card)
+                        const areaCard = document.querySelector(`.goal-area-card button[onclick*='modal-bloco-${data.bloco_id}']`)?.closest('.goal-area-card');
+                        if (areaCard) {
+                            const areaPercentEl = areaCard.querySelector(".goal-area-percent");
+                            if (areaPercentEl) areaPercentEl.innerText = data.bloco_media_progresso + "%";
+                            const areaProgressBar = areaCard.querySelector(".progress-bar");
+                            if (areaProgressBar) areaProgressBar.style.width = data.bloco_media_progresso + "%";
+                        }
+                        
+                        // 3. Atualizar elemento específico com base no retorno
+                        // Caso seja incremento/redução de meta numérica
+                        if (data.item_id && data.valor_atual !== undefined) {
+                            const goalCard = document.querySelector(`.smart-goal-card a[href*="/metas-inteligentes/${data.item_id}/"]`)?.closest('.smart-goal-card');
+                            if (goalCard) {
+                                // Atualiza a contagem visual (ex: 2/4)
+                                const countBadge = Array.from(goalCard.querySelectorAll(".smart-goal-badges span")).find(span => span.querySelector(".bi-graph-up-arrow") || span.textContent.includes('/'));
+                                if (countBadge) {
+                                    const totalVal = countBadge.textContent.split('/').pop().trim();
+                                    countBadge.innerHTML = `<i class="bi bi-graph-up-arrow"></i> ${data.valor_atual}/${totalVal}`;
+                                }
+                                // Atualiza a porcentagem
+                                const percentBadge = goalCard.querySelector(".smart-goal-percent");
+                                if (percentBadge) percentBadge.innerText = data.percentual + "%";
+                                // Atualiza a barra de progresso
+                                const progressBar = goalCard.querySelector(".progress-bar");
+                                if (progressBar) {
+                                    progressBar.style.width = data.percentual + "%";
+                                    progressBar.innerText = data.percentual + "%";
+                                }
+                            }
+                        }
+                        
+                        // Caso seja alternância de subtarefa
+                        if (data.item_id && data.concluido !== undefined && data.hasOwnProperty("pai_id")) {
+                            const taskLink = document.querySelector(`a[href*="/itens/${data.item_id}/alternar"]`);
+                            if (taskLink) {
+                                const icon = taskLink.querySelector("i");
+                                const titleSpan = taskLink.querySelector("span");
+                                if (data.concluido) {
+                                    icon.className = "bi bi-check-circle-fill text-success";
+                                    if (titleSpan) titleSpan.classList.add("text-decoration-line-through", "text-muted");
+                                } else {
+                                    icon.className = "bi bi-circle";
+                                    if (titleSpan) titleSpan.classList.remove("text-decoration-line-through", "text-muted");
+                                }
+                            }
+                            
+                            // Se tiver pai e o pai teve o percentual atualizado
+                            if (data.pai_id && data.pai_percentual !== null) {
+                                const goalCards = document.querySelectorAll('.smart-goal-card');
+                                goalCards.forEach(card => {
+                                    if (card.querySelector(`a[href*="/itens/${data.pai_id}/excluir"]`)) {
+                                        // Atualiza porcentagem do pai
+                                        const percentBadge = card.querySelector(".smart-goal-percent");
+                                        if (percentBadge) percentBadge.innerText = data.pai_percentual + "%";
+                                        // Atualiza a barra de progresso do pai
+                                        const progressBar = card.querySelector(".progress-bar");
+                                        if (progressBar) {
+                                            progressBar.style.width = data.pai_percentual + "%";
+                                            progressBar.innerText = data.pai_percentual + "%";
+                                        }
+                                        // Atualiza contagem de tarefas concluídas do pai
+                                        const subtaskBadge = Array.from(card.querySelectorAll(".smart-goal-badges span")).find(span => span.querySelector(".bi-list-check") || span.textContent.includes('/'));
+                                        if (subtaskBadge) {
+                                            const totalTasks = card.querySelectorAll(".child-task").length;
+                                            const completedTasks = card.querySelectorAll(".child-task i.bi-check-circle-fill").length;
+                                            subtaskBadge.innerHTML = `<i class="bi bi-list-check"></i> ${completedTasks}/${totalTasks}`;
+                                        }
+                                    }
+                                });
+                            }
+                        }
+                        
+                        // Caso seja alternância de etapa (Trilha)
+                        if (data.etapa_id && data.concluido !== undefined) {
+                            const stepLink = document.querySelector(`a[href*="/etapas/${data.etapa_id}/alternar"]`);
+                            if (stepLink) {
+                                const timelineItem = stepLink.closest(".timeline-item");
+                                if (timelineItem) {
+                                    const dot = timelineItem.querySelector(".timeline-dot");
+                                    const stepTitle = timelineItem.querySelector(".timeline-title");
+                                    if (data.concluido) {
+                                        if (dot) {
+                                            dot.classList.add("completed");
+                                            dot.innerHTML = `<i class="bi bi-check-lg"></i>`;
+                                        }
+                                        if (stepTitle) stepTitle.classList.add("completed");
+                                    } else {
+                                        if (dot) {
+                                            dot.classList.remove("completed");
+                                            dot.innerHTML = "";
+                                        }
+                                        if (stepTitle) stepTitle.classList.remove("completed");
+                                    }
+                                }
+                                
+                                // Atualiza a barra de progresso da trilha
+                                const trackerPremium = stepLink.closest(".progress-tracker-premium");
+                                if (trackerPremium && data.progresso_percentual !== undefined) {
+                                    const percentLabel = Array.from(trackerPremium.querySelectorAll("span, div")).find(el => el.textContent.includes("%"));
+                                    if (percentLabel) {
+                                        percentLabel.innerText = data.progresso_percentual + "%";
+                                    }
+                                    const trackerBar = trackerPremium.querySelector(".progress-bar");
+                                    if (trackerBar) {
+                                        trackerBar.style.width = data.progresso_percentual + "%";
+                                        trackerBar.innerText = data.progresso_percentual + "%";
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // Caso seja opção de checklist (Biblioteca)
+                        if (data.opcao_id && data.selecionado !== undefined) {
+                            const optionLink = document.querySelector(`a[href*="/opcoes/${data.opcao_id}/alternar"]`);
+                            if (optionLink) {
+                                const icon = optionLink.querySelector("i");
+                                if (data.selecionado) {
+                                    icon.className = "bi bi-check-square-fill";
+                                } else {
+                                    icon.className = "bi bi-square";
+                                }
+                            }
+                        }
+                    }
+                })
+                .catch(err => {
+                    console.error("Erro na requisição AJAX, recarregando página como fallback...", err);
+                    window.location.href = href;
+                });
+        }
+    });
+
+    const params = new URLSearchParams(window.location.search);
+    const modal = params.get("modal");
+    const tab = params.get("tab");
+
+    if (modal) {
+        abrirBloco("modal-bloco-" + modal);
+        if (tab) {
+            const modalEl = document.getElementById("modal-bloco-" + modal);
+            if (modalEl) {
+                const tabButton = modalEl.querySelector(`.workspace-tab[data-target^="${tab}-"]`);
+                if (tabButton) {
+                    tabButton.click();
+                }
+            }
+        }
+    }
+});
+</script>
+
+{% endblock %}

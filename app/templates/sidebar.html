@@ -1,0 +1,175 @@
+<aside class="ascend-sidebar">
+
+    <div class="sidebar-top">
+
+        <a href="/dashboard" class="sidebar-logo">
+
+            <div class="logo-icon">
+                A
+            </div>
+
+            <div class="logo-text">
+
+                <span class="logo-title">
+                    ASCEND
+                </span>
+
+                <span class="logo-subtitle">
+                    Personal Evolution OS
+                </span>
+
+            </div>
+
+        </a>
+
+        <div class="sidebar-profile">
+
+            <div class="sidebar-avatar {{ avatar_frame }}">
+
+                {% if current_user.avatar %}
+
+                    <img
+                        src="{{ url_for(
+                            'static',
+                            filename='uploads/' ~ current_user.avatar
+                        ) }}"
+                        alt="Avatar">
+
+                {% else %}
+
+                    <div class="avatar-placeholder">
+                        {{ current_user.nome[0]|upper }}
+                    </div>
+
+                {% endif %}
+
+            </div>
+
+            <div class="sidebar-rank">
+                {{ rank_atual if rank_atual is defined else "Despertar I" }}
+            </div>
+
+            <div class="sidebar-profile-name">
+                {{ current_user.nome }}
+            </div>
+
+            <div class="sidebar-profile-level">
+                Nível {{ current_user.nivel }}
+            </div>
+
+            <div class="sidebar-profile-progress">
+
+                <div class="progress">
+
+                    <div class="progress-bar"
+                         style="width: {{ sidebar_progresso }}%;">
+
+                    </div>
+
+                </div>
+
+                <small>
+                    {{ sidebar_progresso }}% evolução geral
+                </small>
+
+            </div>
+
+        </div>
+
+        <nav class="sidebar-nav">
+
+            <a href="/dashboard"
+               class="sidebar-item {% if request.path == '/dashboard' %}active{% endif %}">
+
+                <i class="bi bi-house-door"></i>
+
+                <span>
+                    Início
+                </span>
+
+            </a>
+
+            <a href="/metas"
+               class="sidebar-item {% if request.path.startswith('/metas') %}active{% endif %}">
+
+                <i class="bi bi-compass"></i>
+
+                <span>
+                    Jornadas
+                </span>
+
+            </a>
+
+            <a href="/conquistas"
+               class="sidebar-item {% if request.path == '/conquistas' %}active{% endif %}">
+
+                <i class="bi bi-award"></i>
+
+                <span>
+                    Legado
+                </span>
+
+            </a>
+
+            <a href="/hall"
+               class="sidebar-item {% if request.path == '/hall' %}active{% endif %}">
+
+                <i class="bi bi-gem"></i>
+
+                <span>
+                    Hall
+                </span>
+
+            </a>
+
+            <a href="/ascensao"
+               class="sidebar-item {% if request.path == '/ascensao' %}active{% endif %}">
+
+                <i class="bi bi-graph-up-arrow"></i>
+
+                <span>
+                    Ascensão
+                </span>
+
+            </a>
+
+            <a href="/perfil"
+               class="sidebar-item {% if request.path == '/perfil' %}active{% endif %}">
+
+                <i class="bi bi-person"></i>
+
+                <span>
+                    Perfil
+                </span>
+
+            </a>
+
+        </nav>
+
+    </div>
+
+    <div class="sidebar-bottom">
+
+        <div class="sidebar-quote">
+
+            <span>
+                “A evolução é construída em silêncio.”
+            </span>
+
+        </div>
+
+        <a href="/logout"
+           class="sidebar-item logout-item">
+
+            <i class="bi bi-box-arrow-right"></i>
+
+            <span>
+                Sair
+            </span>
+
+        </a>
+
+    </div>
+
+</aside>
+

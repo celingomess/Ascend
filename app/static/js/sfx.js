@@ -1,6 +1,6 @@
 /* ===================================
    WEB AUDIO API SFX SYNTHESIZER
-   Zero external audio file dependencies!
+   Foco & Evolução Pessoal (Acoustic / Zen / Ambient Aesthetics)
 =================================== */
 
 const AscendSFX = {
@@ -23,11 +23,11 @@ const AscendSFX = {
         const ctx = this.ctx;
         if (!ctx) return;
 
-        // Resume if suspended (browser security)
         if (ctx.state === 'suspended') {
             ctx.resume();
         }
 
+        // Toque orgânico amortecido (Woodblock / Gota de água quente)
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
 
@@ -35,11 +35,10 @@ const AscendSFX = {
         gain.connect(ctx.destination);
 
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(1000, ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(300, ctx.currentTime + 0.05);
+        osc.frequency.setValueAtTime(420, ctx.currentTime); // Frequência quente/média
 
-        gain.gain.setValueAtTime(0.04, ctx.currentTime); // Soft volume
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
+        gain.gain.setValueAtTime(0.025, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.05);
 
         osc.start();
         osc.stop(ctx.currentTime + 0.05);
@@ -56,26 +55,31 @@ const AscendSFX = {
         }
 
         const now = ctx.currentTime;
-        // Crystal arpeggio progression (C5 -> E5 -> G5 -> C6)
-        const notes = [523.25, 659.25, 783.99, 1046.50];
+        
+        // Frequência base de Solfeggio 528Hz (conhecida como frequência da transformação e clareza mental)
+        const baseFreq = 528;
+        const harmonics = [1, 1.25, 1.5, 2]; // Frequência base, Terça maior, Quinta justa, Oitava
 
-        notes.forEach((freq, idx) => {
-            const time = now + idx * 0.08;
-
+        harmonics.forEach((ratio, idx) => {
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
 
             osc.connect(gain);
             gain.connect(ctx.destination);
 
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(freq, time);
+            osc.type = 'sine'; // Ondas senoidais puras para simular tigelas de cristal / sinos tibetanos
+            osc.frequency.setValueAtTime(baseFreq * ratio, now);
 
-            gain.gain.setValueAtTime(0.08, time);
-            gain.gain.exponentialRampToValueAtTime(0.001, time + 0.45);
+            // Volume relativo de cada harmônico (harmônicos superiores são mais suaves)
+            const volume = 0.035 / (idx + 1);
+            gain.gain.setValueAtTime(volume, now);
+            
+            // Suave decaimento exponencial simulando a ressonância natural de metal/cristal
+            gain.gain.linearRampToValueAtTime(volume * 0.4, now + 0.4);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + 2.0);
 
-            osc.start(time);
-            osc.stop(time + 0.45);
+            osc.start(now);
+            osc.stop(now + 2.0);
         });
     },
 
@@ -90,47 +94,51 @@ const AscendSFX = {
         }
 
         const now = ctx.currentTime;
-        // Heroic fanfare chords progression (C4 -> F4 -> G4 -> C5/E5/G5/C6 master chord)
-        const chords = [
-            [261.63, 329.63, 392.00], // C4 major
-            [349.23, 440.00, 523.25], // F4 major
-            [392.00, 493.88, 587.33], // G4 major
-            [523.25, 659.25, 783.99, 1046.50] // C5 major triumphant
-        ];
 
-        chords.forEach((chord, chordIdx) => {
-            const startTime = now + chordIdx * 0.2;
-            const duration = chordIdx === chords.length - 1 ? 0.9 : 0.25;
+        // 1. Ressonância de Gongo Zen Profundo (C3 + G3 + C4)
+        const gongFreqs = [130.81, 196.00, 261.63];
+        gongFreqs.forEach((freq, idx) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
 
-            chord.forEach((freq) => {
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
 
-                osc.connect(gain);
-                gain.connect(ctx.destination);
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, now);
 
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(freq, startTime);
+            const vol = 0.045 / (idx + 1);
+            gain.gain.setValueAtTime(vol, now);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + 3.0); // Ressonância bem longa de fundo
 
-                // Add nice heroic vibrato on the final chord
-                if (chordIdx === chords.length - 1) {
-                    osc.frequency.linearRampToValueAtTime(freq * 1.012, startTime + 0.25);
-                    osc.frequency.linearRampToValueAtTime(freq * 0.988, startTime + 0.5);
-                    osc.frequency.linearRampToValueAtTime(freq, startTime + 0.75);
-                }
+            osc.start(now);
+            osc.stop(now + 3.0);
+        });
 
-                // Volume fade out
-                gain.gain.setValueAtTime(0.06, startTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+        // 2. Cascata Ascendente de Sinos de Vento Estelares (C5 -> E5 -> G5 -> C6 -> E6 -> G6)
+        const chimeNotes = [523.25, 659.25, 783.99, 1046.50, 1318.51, 1567.98];
+        chimeNotes.forEach((freq, idx) => {
+            const time = now + 0.35 + idx * 0.15; // Inicia um pouco após o gongo profundo
 
-                osc.start(startTime);
-                osc.stop(startTime + duration);
-            });
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, time);
+
+            gain.gain.setValueAtTime(0.02, time);
+            gain.gain.exponentialRampToValueAtTime(0.0001, time + 1.2);
+
+            osc.start(time);
+            osc.stop(time + 1.2);
         });
     }
 };
 
-// Auto-initialize when clicking anywhere on page to comply with browser audio autoplays
+// Auto-inicializa com o primeiro clique na página
 document.addEventListener('click', () => {
     AscendSFX.init();
 }, { once: true });

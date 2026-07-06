@@ -1,0 +1,188 @@
+<section id="trilhas-{{ grupo.bloco.id }}"
+         class="workspace-panel">
+
+    <div class="workspace-panel-header">
+
+        <span class="badge-old mb-2">
+            <i class="bi bi-signpost-2"></i>
+            Trilhas
+        </span>
+
+        <h3 class="ascend-title mb-2">
+            Marcos de progresso
+        </h3>
+
+        <p class="text-muted mb-0">
+            Etapas sequenciais para acompanhar evolução real.
+        </p>
+
+    </div>
+
+    <details class="mb-4">
+        <summary class="btn btn-ascend-outline btn-sm mb-2" style="list-style: none; display: inline-block; cursor: pointer;">
+            <i class="bi bi-plus-lg"></i> Nova Trilha
+        </summary>
+        <div class="creation-card p-4 mt-2" style="border: 1px solid var(--border-color); border-radius: 8px; background: rgba(255,255,255,0.03);">
+            <form method="POST" action="/blocos/{{ grupo.bloco.id }}/progresso">
+                <input type="text" name="titulo" class="form-control mb-3" placeholder="Nome da trilha. Ex: Grade Curricular, Cronograma" required>
+                <input type="text" name="unidade" class="form-control mb-3" placeholder="Unidade. Ex: aulas, etapas (opcional)">
+                <input type="text" name="descricao" class="form-control mb-3" placeholder="Descrição curta (opcional)">
+                <textarea name="etapas" class="form-control mb-3" rows="5" placeholder="Digite uma etapa por linha (Ex: Aula 1, Aula 2)"></textarea>
+                <button type="submit" class="btn btn-ascend">
+                    <i class="bi bi-plus-lg"></i> Criar Trilha
+                </button>
+            </form>
+        </div>
+    </details>
+
+    {% for progresso in grupo.progressos %}
+
+        <div class="progress-tracker-premium">
+
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+
+                <div>
+
+                    <span class="badge-old mb-2">
+                        <i class="bi bi-bar-chart-line"></i>
+                        {{ progresso.unidade or "etapas" }}
+                    </span>
+
+                    <h4 class="ascend-title">
+                        {{ progresso.titulo }}
+                    </h4>
+
+                    {% if progresso.descricao %}
+                        <p class="text-muted">
+                            {{ progresso.descricao }}
+                        </p>
+                    {% endif %}
+
+                </div>
+
+                <a href="/progressos/{{ progresso.id }}/excluir"
+                   class="btn btn-danger-old"
+                   onclick="return confirm('Excluir esta trilha?')">
+                    <i class="bi bi-trash3"></i>
+                </a>
+
+            </div>
+
+            <div class="mt-4">
+
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Progresso</span>
+                    <strong>{{ progresso.percentual() }}%</strong>
+                </div>
+
+                <div class="progress">
+                    <div class="progress-bar"
+                         style="width: {{ progresso.percentual() }}%;">
+                        {{ progresso.percentual() }}%
+                    </div>
+                </div>
+
+            </div>
+
+            <form method="POST"
+                  action="/progressos/{{ progresso.id }}/etapa"
+                  class="mt-4">
+
+                <div class="row g-2">
+
+                    <div class="col-md-7">
+                        <input type="text"
+                               name="titulo"
+                               class="form-control"
+                               placeholder="Nova etapa"
+                               required>
+                    </div>
+
+                    <div class="col-md-3">
+                        <input type="text"
+                               name="descricao"
+                               class="form-control"
+                               placeholder="Descrição">
+                    </div>
+
+                    <div class="col-md-2">
+                        <button type="submit"
+                                class="btn btn-ascend w-100">
+                            <i class="bi bi-plus-lg"></i>
+                        </button>
+                    </div>
+
+                </div>
+
+            </form>
+
+            {% if progresso.etapas %}
+
+                <div class="ascend-timeline">
+
+                    {% for etapa in progresso.etapas %}
+
+                        <div class="timeline-item">
+
+                            <div class="timeline-dot {% if etapa.concluido %}completed{% endif %}">
+
+                                {% if etapa.concluido %}
+                                    <i class="bi bi-check-lg"></i>
+                                {% endif %}
+
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-start gap-3">
+
+                                <div>
+
+                                    <div class="timeline-title {% if etapa.concluido %}completed{% endif %}">
+                                        {{ etapa.titulo }}
+                                    </div>
+
+                                    {% if etapa.descricao %}
+                                        <div class="timeline-description">
+                                            {{ etapa.descricao }}
+                                        </div>
+                                    {% endif %}
+
+                                </div>
+
+                                <div class="timeline-actions">
+
+                                    <a href="/etapas/{{ etapa.id }}/alternar"
+                                       class="btn btn-ascend-outline btn-sm">
+                                        <i class="bi bi-check2"></i>
+                                    </a>
+
+                                    <a href="/etapas/{{ etapa.id }}/excluir"
+                                       class="btn btn-danger-old btn-sm"
+                                       onclick="return confirm('Excluir esta etapa?')">
+                                        <i class="bi bi-trash3"></i>
+                                    </a>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    {% endfor %}
+
+                </div>
+
+            {% endif %}
+
+        </div>
+
+    {% else %}
+
+        <div class="workspace-empty-state">
+            <i class="bi bi-signpost-2"></i>
+            <strong>Nenhuma trilha criada</strong>
+            <span>Use a aba Criar para adicionar uma trilha de evolução.</span>
+        </div>
+
+    {% endfor %}
+
+</section>

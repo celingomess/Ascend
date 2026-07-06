@@ -1,0 +1,283 @@
+<section id="metas-{{ grupo.bloco.id }}"
+         class="workspace-panel">
+
+    <div class="workspace-panel-header">
+
+        <span class="badge-old mb-2">
+            <i class="bi bi-bullseye"></i>
+            Metas Inteligentes
+        </span>
+
+        <h3 class="ascend-title mb-2">
+            Hábitos, indicadores e objetivos
+        </h3>
+
+        <p class="text-muted mb-0">
+            Tudo que exige registro de progresso ou subtarefas fica aqui.
+        </p>
+
+    </div>
+
+    <details class="mb-4">
+        <summary class="btn btn-ascend-outline btn-sm mb-2" style="list-style: none; display: inline-block; cursor: pointer;">
+            <i class="bi bi-plus-lg"></i> Nova Meta Inteligente
+        </summary>
+        <div class="creation-card p-4 mt-2" style="border: 1px solid var(--border-color); border-radius: 8px; background: rgba(255,255,255,0.03);">
+            <form method="POST" action="/blocos/{{ grupo.bloco.id }}/item">
+                <input type="hidden" name="tipo" value="mini_meta">
+                <input type="text" name="titulo" class="form-control mb-3" placeholder="Nome da meta. Ex: Ler livro, Fazer treinos" required>
+                <textarea name="conteudo" class="form-control mb-3" rows="3" placeholder="Descrição da meta (opcional)"></textarea>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label text-muted small">Frequência</label>
+                        <select name="frequencia" class="form-select">
+                            <option value="unica">Objetivo único</option>
+                            <option value="diaria">Hábito diário</option>
+                            <option value="semanal">Hábito semanal</option>
+                            <option value="mensal">Hábito mensal</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label text-muted small">Meta Numérica (Opcional)</label>
+                        <input type="number" name="meta_valor" class="form-control" min="1" placeholder="Ex: 10, 30 (deixe em branco se for checklists)">
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-ascend">
+                    <i class="bi bi-plus-lg"></i> Criar Meta
+                </button>
+            </form>
+        </div>
+    </details>
+
+    <div class="smart-goal-grid">
+
+        {% for item in grupo.itens %}
+            {% if item.tipo == "mini_meta" %}
+
+                <article class="smart-goal-card">
+
+                    <div class="smart-goal-head">
+
+                        <div>
+
+                            <span class="badge-old mb-2">
+                                <i class="bi bi-bullseye"></i>
+                                Meta Inteligente
+                            </span>
+
+                            <h4>
+                                {{ item.titulo }}
+                            </h4>
+
+                            {% if item.conteudo %}
+                                <p>{{ item.conteudo }}</p>
+                            {% endif %}
+
+                        </div>
+
+                        {% if item.meta_valor %}
+                            {% set progresso_meta = ((item.valor_atual or 0) / item.meta_valor * 100) | round(0) %}
+                            <span class="smart-goal-percent">{{ progresso_meta }}%</span>
+                        {% else %}
+                            <span class="smart-goal-percent">{{ item.percentual() }}%</span>
+                        {% endif %}
+
+                    </div>
+
+                    <div class="smart-goal-badges">
+
+                        <span>
+                            <i class="bi bi-repeat"></i>
+                            {% if item.frequencia == "diaria" %}
+                                Diária
+                            {% elif item.frequencia == "semanal" %}
+                                Semanal
+                            {% elif item.frequencia == "mensal" %}
+                                Mensal
+                            {% else %}
+                                Objetivo único
+                            {% endif %}
+                        </span>
+
+                        <span>
+                            <i class="bi bi-fire"></i>
+                            {{ item.temperatura()|capitalize }}
+                        </span>
+
+                        {% if item.meta_valor %}
+                            <span>
+                                <i class="bi bi-graph-up-arrow"></i>
+                                {{ item.valor_atual or 0 }}/{{ item.meta_valor }}
+                            </span>
+                        {% else %}
+                            <span>
+                                <i class="bi bi-list-check"></i>
+                                {{ item.filhos_concluidos() }}/{{ item.total_filhos() }}
+                            </span>
+                        {% endif %}
+
+                    </div>
+
+                    <div class="smart-goal-progress">
+
+                        <div class="d-flex justify-content-between mb-2">
+
+                            <span>Progresso</span>
+
+                            {% if item.meta_valor %}
+                                <strong>{{ item.valor_atual or 0 }}/{{ item.meta_valor }}</strong>
+                            {% else %}
+                                <strong>{{ item.filhos_concluidos() }}/{{ item.total_filhos() }}</strong>
+                            {% endif %}
+
+                        </div>
+
+                        <div class="progress">
+
+                            {% if item.meta_valor %}
+                                {% set progresso_meta = ((item.valor_atual or 0) / item.meta_valor * 100) | round(0) %}
+
+                                <div class="progress-bar"
+                                     style="width: {{ progresso_meta }}%;">
+                                    {{ progresso_meta }}%
+                                </div>
+                            {% else %}
+                                <div class="progress-bar"
+                                     style="width: {{ item.percentual() }}%;">
+                                     {{ item.percentual() }}%
+                                </div>
+                            {% endif %}
+
+                        </div>
+
+                    </div>
+
+                    {% if item.meta_valor %}
+
+                        <div class="smart-goal-actions">
+
+                            <a href="/metas-inteligentes/{{ item.id }}/reduzir?tab=metas"
+                               class="btn btn-ascend-outline btn-sm">
+                                <i class="bi bi-dash-lg"></i>
+                            </a>
+
+                            <a href="/metas-inteligentes/{{ item.id }}/incrementar?tab=metas"
+                               class="btn btn-ascend btn-sm">
+                                <i class="bi bi-plus-lg"></i>
+                                Registrar
+                            </a>
+
+                        </div>
+
+                    {% endif %}
+
+                    {% if item.filhos or not item.meta_valor %}
+
+                        <div class="child-task-list mt-3">
+
+                            {% for filho in item.filhos %}
+
+                                <div class="child-task">
+
+                                    <a href="/itens/{{ filho.id }}/alternar?tab=metas"
+                                       class="child-task-link">
+
+                                        {% if filho.concluido %}
+                                            <i class="bi bi-check-circle-fill text-success"></i>
+                                        {% else %}
+                                            <i class="bi bi-circle"></i>
+                                        {% endif %}
+
+                                        <span class="{% if filho.concluido %}text-decoration-line-through text-muted{% endif %}">
+                                            {{ filho.titulo }}
+                                        </span>
+
+                                    </a>
+
+                                    <a href="/itens/{{ filho.id }}/excluir"
+                                       class="btn btn-danger-old btn-sm"
+                                       onclick="return confirm('Excluir esta subtarefa?')">
+                                        <i class="bi bi-trash3"></i>
+                                    </a>
+
+                                </div>
+
+                            {% endfor %}
+
+                        </div>
+
+                        <form method="POST"
+                              action="/itens/{{ item.id }}/filho"
+                              class="mt-3">
+
+                            <div class="input-group">
+
+                                <input type="text"
+                                       name="titulo"
+                                       class="form-control"
+                                       placeholder="Nova subtarefa"
+                                       required>
+
+                                <button class="btn btn-ascend">
+                                    <i class="bi bi-plus-lg"></i>
+                                </button>
+
+                            </div>
+
+                        </form>
+
+                    {% endif %}
+
+                    <div class="mt-3 d-flex gap-2 flex-wrap">
+
+                        <details style="display: inline-block; width: 100%;">
+                            <summary class="btn btn-ascend-outline btn-sm" style="list-style: none; display: inline-block; cursor: pointer;">
+                                <i class="bi bi-pencil-square"></i> Editar
+                            </summary>
+                            <div class="mt-3 p-3 edit-form-container" style="border: 1px solid var(--border-color); border-radius: 8px; background: rgba(255,255,255,0.02); text-align: left;">
+                                <form method="POST" action="/itens/{{ item.id }}/editar">
+                                    <div class="mb-3">
+                                        <label class="form-label small text-muted">Título</label>
+                                        <input type="text" name="titulo" class="form-control" value="{{ item.titulo }}" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label small text-muted">Descrição</label>
+                                        <textarea name="conteudo" class="form-control" rows="2">{{ item.conteudo or '' }}</textarea>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-6 mb-3">
+                                            <label class="form-label small text-muted">Frequência</label>
+                                            <select name="frequencia" class="form-select">
+                                                <option value="unica" {% if item.frequencia == 'unica' %}selected{% endif %}>Única</option>
+                                                <option value="diaria" {% if item.frequencia == 'diaria' %}selected{% endif %}>Diária</option>
+                                                <option value="semanal" {% if item.frequencia == 'semanal' %}selected{% endif %}>Semanal</option>
+                                                <option value="mensal" {% if item.frequencia == 'mensal' %}selected{% endif %}>Mensal</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-6 mb-3">
+                                            <label class="form-label small text-muted">Meta Numérica</label>
+                                            <input type="number" name="meta_valor" class="form-control" value="{{ item.meta_valor or '' }}" min="1">
+                                        </div>
+                                    </div>
+                                    <button type="submit" class="btn btn-ascend btn-sm">Salvar</button>
+                                </form>
+                            </div>
+                        </details>
+
+                        <a href="/itens/{{ item.id }}/excluir"
+                           class="btn btn-danger-old btn-sm"
+                           onclick="return confirm('Excluir esta meta inteligente?')">
+                            <i class="bi bi-trash3"></i>
+                            Excluir
+                        </a>
+
+                    </div>
+
+                </article>
+
+            {% endif %}
+        {% endfor %}
+
+    </div>
+
+</section>

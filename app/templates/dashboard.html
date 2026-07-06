@@ -152,7 +152,12 @@ Início | Ascend
 
 </section>
 
-<section class="dashboard-next-actions-section mb-5">
+
+<div class="dashboard-split-layout">
+
+    <!-- Coluna Principal (Esquerda - Foco e Jornadas) -->
+    <div class="dashboard-col-left">
+        <section class="dashboard-next-actions-section mb-5">
 
     <div class="dashboard-section-header">
         <div>
@@ -412,10 +417,11 @@ Início | Ascend
     {% endif %}
 
 </section>
+    </div>
 
-<section class="dashboard-performance-consistency mb-4">
-
-    <div class="ascend-card p-4 performance-card">
+    <!-- Coluna de Analytics/Performance (Direita - Painel Lateral) -->
+    <div class="dashboard-col-right">
+        <div class="ascend-card p-4 performance-card">
 
         <span class="badge-old mb-3">
             <i class="bi bi-speedometer2"></i>
@@ -504,7 +510,8 @@ Início | Ascend
 
     </div>
 
-    <div class="ascend-card p-4 dashboard-heatmap-card">
+    
+        <div class="ascend-card p-4 dashboard-heatmap-card">
 
         <div class="heatmap-header">
 
@@ -546,169 +553,7 @@ Início | Ascend
         </div>
 
     </div>
-
-</section>
-
-<section class="dashboard-timeline mb-4">
-
-    <div class="ascend-card p-4">
-
-        <div class="d-flex justify-content-between align-items-center mb-4">
-
-            <div>
-
-                <span class="badge-old mb-3">
-                    <i class="bi bi-clock-history"></i>
-                    Atividade
-                </span>
-
-                <h3 class="ascend-title mb-0">
-                    Linha da Evolução
-                </h3>
-
-            </div>
-
-        </div>
-
-        {% if eventos_dashboard %}
-
-            <div class="timeline-container">
-
-                {% for evento in eventos_dashboard %}
-
-                    <div class="timeline-item">
-
-                        <div class="timeline-icon">
-                            {% if evento.tipo == "achievement" %}
-                                <i class="bi bi-trophy"></i>
-                            {% elif evento.tipo == "meta" %}
-                                <i class="bi bi-bullseye"></i>
-                            {% elif evento.tipo == "modulo" %}
-                                <i class="bi bi-book"></i>
-                            {% elif evento.tipo == "jornada" %}
-                                <i class="bi bi-compass"></i>
-                            {% elif evento.tipo == "tarefa" %}
-                                <i class="bi bi-check2-circle"></i>
-                            {% elif evento.tipo == "streak" %}
-                                <i class="bi bi-fire"></i>
-                            {% else %}
-                                <i class="bi bi-stars"></i>
-                            {% endif %}
-                        </div>
-
-                        <div class="timeline-content">
-
-                            <div class="timeline-header">
-
-                                <div>
-                                    <strong>
-                                        {% if evento.tipo == "achievement" %}
-                                            Conquista desbloqueada
-                                        {% elif evento.tipo == "meta" %}
-                                            Meta atualizada
-                                        {% elif evento.tipo == "modulo" %}
-                                            Módulo criado
-                                        {% elif evento.tipo == "jornada" %}
-                                            Jornada atualizada
-                                        {% elif evento.tipo == "tarefa" %}
-                                            Tarefa concluída
-                                        {% elif evento.tipo == "streak" %}
-                                            Sequência atualizada
-                                        {% else %}
-                                            Evolução registrada
-                                        {% endif %}
-                                    </strong>
-
-                                    <p class="timeline-description">
-                                        {{ evento.descricao or evento.titulo }}
-                                    </p>
-                                </div>
-
-                                <small>
-                                    {{ evento.criado_em.strftime('%d/%m/%Y %H:%M') }}
-                                </small>
-
-                            </div>
-
-                            {% if evento.xp and evento.xp > 0 %}
-                                <div class="timeline-xp">
-                                    +{{ evento.xp }} XP
-                                </div>
-        {% endif %}
-
-    </div>
-
-</div>
-
-                {% endfor %}
-
-            </div>
-
-        {% else %}
-
-            <div class="text-center py-5">
-
-                <i class="bi bi-clock-history display-5 gold-text"></i>
-
-                <p class="text-muted mt-3 mb-0">
-                    Nenhuma atividade registrada ainda.
-                </p>
-
-            </div>
-
-        {% endif %}
-
-    </div>
-
-</section>
-
-<section class="dashboard-life-grid mb-4">
-
-    <div class="ascend-card p-4">
-
-        <span class="badge-old mb-3">
-            <i class="bi bi-diagram-3"></i>
-            Mapa da Vida
-        </span>
-
-        <h3 class="ascend-title mb-4">
-            Áreas em desenvolvimento
-        </h3>
-
-        {% for categoria, valor in life_map.items() %}
-
-            <div class="life-domain-card mb-3">
-
-                <div class="d-flex justify-content-between mb-2">
-
-                    <span class="domain-label">
-                        {{ categoria }}
-                    </span>
-
-                    <span class="domain-value">
-                        {{ valor }}%
-                    </span>
-
-                </div>
-
-                <div class="progress">
-
-                    <div class="progress-bar"
-                         style="width: {{ valor }}%;">
-
-                        {{ valor }}%
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        {% endfor %}
-
-    </div>
-
-    <div class="ascend-card p-4 dashboard-chart-card">
+        <div class="ascend-card p-4 dashboard-chart-card">
 
         <div class="mb-4">
             <span class="badge-old mb-2">
@@ -752,8 +597,55 @@ Início | Ascend
         </div>
 
     </div>
+        <div class="ascend-card p-4">
 
-</section>
+        <span class="badge-old mb-3">
+            <i class="bi bi-diagram-3"></i>
+            Mapa da Vida
+        </span>
+
+        <h3 class="ascend-title mb-4">
+            Áreas em desenvolvimento
+        </h3>
+
+        {% for categoria, valor in life_map.items() %}
+
+            <div class="life-domain-card mb-3">
+
+                <div class="d-flex justify-content-between mb-2">
+
+                    <span class="domain-label">
+                        {{ categoria }}
+                    </span>
+
+                    <span class="domain-value">
+                        {{ valor }}%
+                    </span>
+
+                </div>
+
+                <div class="progress">
+
+                    <div class="progress-bar"
+                         style="width: {{ valor }}%;">
+
+                        {{ valor }}%
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        {% endfor %}
+
+    </div>
+
+    
+    </div>
+
+</div>
+
 
 <script>
 const ctx = document.getElementById('graficoMetas');

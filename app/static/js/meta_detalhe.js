@@ -134,6 +134,11 @@ document.addEventListener("DOMContentLoaded", function() {
         if (isAction) {
             event.preventDefault();
             
+            if (typeof AscendSFX !== 'undefined') {
+                AscendSFX.playClick();
+            }
+
+            
             // Adiciona ajax=1 ao URL
             const url = new URL(href, window.location.origin);
             url.searchParams.set("ajax", "1");
@@ -281,8 +286,14 @@ document.addEventListener("DOMContentLoaded", function() {
                         // === GATILHOS DE ANIMAÇÃO DE CONFETE ===
                         if (data.usuario_nivel && typeof currentLevel !== 'undefined' && data.usuario_nivel > currentLevel) {
                             currentLevel = data.usuario_nivel;
+                            if (typeof AscendSFX !== 'undefined') {
+                                AscendSFX.playLevelUp();
+                            }
                             mostrarLevelUpModal(data.usuario_nivel);
                         } else if (data.meta_progresso === 100) {
+                            if (typeof AscendSFX !== 'undefined') {
+                                AscendSFX.playSuccess();
+                            }
                             dispararConfeteGrande();
                         } else if (
                             data.percentual === 100 || 
@@ -290,6 +301,9 @@ document.addEventListener("DOMContentLoaded", function() {
                             data.progresso_percentual === 100 || 
                             data.bloco_media_progresso === 100
                         ) {
+                            if (typeof AscendSFX !== 'undefined') {
+                                AscendSFX.playSuccess();
+                            }
                             dispararConfete();
                         }
                     }

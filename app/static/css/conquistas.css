@@ -1,0 +1,189 @@
+/* ===================================
+   CONQUISTAS 3D FLIP — ASCEND
+=================================== */
+
+.achievements-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 30px;
+    perspective: 1000px; /* Cria o efeito de profundidade 3D */
+    margin-top: 20px;
+}
+
+.achievement-card-wrapper {
+    width: 100%;
+    height: 320px;
+    perspective: 1000px;
+}
+
+/* O card que gira */
+.achievement-card {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transform-style: preserve-3d;
+    transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.5s;
+    cursor: pointer;
+    border-radius: 20px;
+}
+
+/* Quando passa o mouse, gira o card */
+.achievement-card-wrapper:hover .achievement-card {
+    transform: rotateY(180deg);
+}
+
+/* Configuração geral de ambas as faces */
+.card-face {
+    position: absolute;
+    inset: 0;
+    backface-visibility: hidden; /* Esconde a face de trás quando virada */
+    border-radius: 20px;
+    padding: 30px 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* FRENTE */
+.card-front {
+    background: radial-gradient(circle at top, rgba(255, 255, 255, 0.05), rgba(7, 17, 12, 0.95));
+    color: #fff;
+    z-index: 2;
+}
+
+/* VERSO */
+.card-back {
+    background: radial-gradient(circle at bottom, rgba(226, 201, 133, 0.1), rgba(7, 17, 12, 0.98));
+    color: #fff;
+    transform: rotateY(180deg); /* Já começa virado de costas */
+    border: 1px solid rgba(226, 201, 133, 0.25);
+}
+
+/* ESTILOS INTERNOS DA FRENTE */
+.achievement-icon {
+    font-size: 4.5rem;
+    line-height: 1;
+    margin-top: 15px;
+    transition: transform 0.5s ease;
+}
+
+.achievement-card-wrapper:hover .achievement-icon {
+    transform: scale(1.15) translateZ(30px);
+}
+
+.achievement-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin: 15px 0 5px;
+    text-align: center;
+    letter-spacing: 0.5px;
+}
+
+.rarity-badge {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-weight: 700;
+    padding: 6px 14px;
+    border-radius: 30px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* ESTILOS INTERNOS DO VERSO */
+.xp-badge {
+    font-size: 0.9rem;
+    font-weight: 800;
+    color: var(--gold-soft);
+    letter-spacing: 1.5px;
+    background: rgba(216, 189, 115, 0.1);
+    border: 1px solid rgba(216, 189, 115, 0.3);
+    padding: 6px 16px;
+    border-radius: 12px;
+}
+
+.achievement-desc {
+    font-size: 0.95rem;
+    color: var(--muted);
+    line-height: 1.5;
+    text-align: center;
+    margin: 10px 0;
+}
+
+.unlock-date {
+    font-size: 0.8rem;
+    color: var(--gold-soft);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    opacity: 0.85;
+}
+
+/* ESTILIZAÇÃO POR RARIDADE */
+
+/* 1. COMUM */
+.achievement-card.comum {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+.achievement-card.comum .achievement-icon {
+    color: #a0aab2; /* Prata/Aço */
+}
+.achievement-card.comum .rarity-badge {
+    color: #a0aab2;
+}
+
+/* 2. INCOMUM */
+.achievement-card.incomum {
+    border: 1px solid rgba(46, 204, 113, 0.25);
+    box-shadow: 0 10px 30px rgba(46, 204, 113, 0.05);
+}
+.achievement-card.incomum:hover {
+    box-shadow: 0 15px 40px rgba(46, 204, 113, 0.15);
+}
+.achievement-card.incomum .achievement-icon {
+    color: #2ecc71; /* Verde Jade */
+}
+.achievement-card.incomum .rarity-badge {
+    color: #2ecc71;
+    border-color: rgba(46, 204, 113, 0.3);
+    background: rgba(46, 204, 113, 0.05);
+}
+
+/* 3. RARA */
+.achievement-card.rara {
+    border: 1px solid rgba(52, 152, 219, 0.3);
+    box-shadow: 0 10px 30px rgba(52, 152, 219, 0.05);
+}
+.achievement-card.rara:hover {
+    box-shadow: 0 15px 40px rgba(52, 152, 219, 0.2);
+}
+.achievement-card.rara .achievement-icon {
+    color: #3498db; /* Azul Cobalto */
+}
+.achievement-card.rara .rarity-badge {
+    color: #3498db;
+    border-color: rgba(52, 152, 219, 0.3);
+    background: rgba(52, 152, 219, 0.05);
+}
+
+/* 4. LENDÁRIA */
+.achievement-card.lendaria {
+    border: 1px solid rgba(216, 189, 115, 0.4);
+    box-shadow: 0 10px 30px rgba(216, 189, 115, 0.08);
+}
+.achievement-card.lendaria:hover {
+    box-shadow: 0 15px 50px rgba(216, 189, 115, 0.3);
+}
+.achievement-card.lendaria .achievement-icon {
+    color: #d8bd73; /* Ouro */
+    text-shadow: 0 0 15px rgba(216, 189, 115, 0.4);
+}
+.achievement-card.lendaria .rarity-badge {
+    color: #d8bd73;
+    border-color: rgba(216, 189, 115, 0.4);
+    background: rgba(216, 189, 115, 0.08);
+}

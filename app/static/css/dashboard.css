@@ -855,4 +855,76 @@
     .dashboard-grid-layout {
         grid-template-columns: 1fr;
     }
-}
+}
+
+@media (max-width: 768px) {
+    .dashboard-command-hero {
+        min-height: auto !important;
+        border-radius: 28px;
+        margin-bottom: 30px;
+    }
+    
+    .dashboard-command-inner {
+        min-height: auto !important;
+        padding: 24px !important;
+    }
+    
+    .dashboard-hero-title {
+        font-size: 2.8rem !important;
+        margin-bottom: 12px;
+    }
+    
+    .dashboard-identity {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 24px;
+        margin-top: 24px;
+    }
+    
+    .dashboard-class-card {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 14px;
+        padding: 16px;
+        border-radius: 18px;
+    }
+    
+    .dashboard-class-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 14px;
+        font-size: 1.2rem;
+    }
+    
+    .dashboard-insight-grid {
+        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)) !important;
+        gap: 10px;
+    }
+    
+    .dashboard-insight-pill {
+        padding: 12px 14px;
+    }
+    
+    .dashboard-insight-pill strong {
+        font-size: 1.15rem;
+    }
+    
+    .dashboard-evolution {
+        text-align: left !important;
+        margin-top: 10px;
+    }
+    
+    .dashboard-evolution-number {
+        font-size: 3.5rem !important;
+    }
+    
+    /* Rolagem horizontal para o Heatmap em telas pequenas de celular */
+    .dashboard-heatmap-card {
+        overflow-x: auto;
+    }
+    
+    .heatmap-grid {
+        min-width: 320px;
+    }
+}
+

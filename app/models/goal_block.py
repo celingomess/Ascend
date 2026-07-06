@@ -36,4 +36,19 @@ class GoalBlock(db.Model):
         default=datetime.utcnow
     )
 
+    itens = db.relationship(
+        "GoalBlockItem",
+        backref="block",
+        lazy="selectin",
+        cascade="all, delete-orphan"
+    )
+
+    progressos = db.relationship(
+        "GoalProgress",
+        backref="block",
+        lazy="selectin",
+        cascade="all, delete-orphan"
+    )
+
+
     

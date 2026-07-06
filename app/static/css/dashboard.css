@@ -859,14 +859,16 @@
 
 @media (max-width: 768px) {
     .dashboard-command-hero {
+        height: auto !important;
         min-height: auto !important;
         border-radius: 28px;
         margin-bottom: 30px;
     }
     
     .dashboard-command-inner {
+        height: auto !important;
         min-height: auto !important;
-        padding: 24px !important;
+        padding: 24px 24px 44px 24px !important;
     }
     
     .dashboard-hero-title {

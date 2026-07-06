@@ -279,7 +279,10 @@ document.addEventListener("DOMContentLoaded", function() {
                         }
 
                         // === GATILHOS DE ANIMAÇÃO DE CONFETE ===
-                        if (data.meta_progresso === 100) {
+                        if (data.usuario_nivel && typeof currentLevel !== 'undefined' && data.usuario_nivel > currentLevel) {
+                            currentLevel = data.usuario_nivel;
+                            mostrarLevelUpModal(data.usuario_nivel);
+                        } else if (data.meta_progresso === 100) {
                             dispararConfeteGrande();
                         } else if (
                             data.percentual === 100 || 
@@ -370,5 +373,39 @@ function dispararConfeteGrande() {
             confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } }));
             confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } }));
         }, 250);
+    }
+}
+
+function mostrarLevelUpModal(novoNivel) {
+    let modal = document.getElementById("level-up-modal");
+    if (!modal) {
+        modal = document.createElement("div");
+        modal.id = "level-up-modal";
+        modal.className = "level-up-modal-overlay";
+        modal.innerHTML = `
+            <div class="level-up-card">
+                <div class="level-up-glow"></div>
+                <div class="level-up-badge">
+                    <i class="bi bi-trophy-fill"></i>
+                </div>
+                <h2>LEVEL UP!</h2>
+                <p>Você evoluiu para o próximo nível</p>
+                <div class="level-up-number">${novoNivel}</div>
+                <button onclick="fecharLevelUpModal()">Continuar Ascensão</button>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    } else {
+        modal.querySelector(".level-up-number").innerText = novoNivel;
+    }
+    
+    modal.classList.add("active");
+    dispararConfeteGrande();
+}
+
+function fecharLevelUpModal() {
+    const modal = document.getElementById("level-up-modal");
+    if (modal) {
+        modal.classList.remove("active");
     }
 }

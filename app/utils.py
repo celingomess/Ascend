@@ -206,15 +206,19 @@ def retornar_json_progresso(meta, bloco, extra_data=None):
         soma_progresso += progresso.percentual()
     bloco_media_progresso = round(soma_progresso / total_elementos, 1) if total_elementos > 0 else 0
 
+    from flask_login import current_user
     data = {
         "success": True,
         "meta_progresso": meta.progresso,
         "bloco_id": bloco.id,
-        "bloco_media_progresso": bloco_media_progresso
+        "bloco_media_progresso": bloco_media_progresso,
+        "usuario_nivel": current_user.nivel if current_user.is_authenticated else 1,
+        "usuario_xp": current_user.xp_total if current_user.is_authenticated else 0
     }
     if extra_data:
         data.update(extra_data)
     return jsonify(data)
+
 
 
 def verificar_conquistas(usuario):

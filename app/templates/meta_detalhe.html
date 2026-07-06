@@ -648,6 +648,9 @@
 
 {% endif %}
 
+<script>
+    let currentLevel = {{ current_user.nivel or 1 }};
+</script>
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 <script src="{{ url_for('static', filename='js/meta_detalhe.js') }}"></script>
 

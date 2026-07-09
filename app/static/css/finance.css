@@ -1,0 +1,46 @@
+/* ===================================
+   GESTÃO FINANCEIRA STYLE SHEET
+=================================== */
+
+.balance-positive {
+    color: #48b478 !important;
+    text-shadow: 0 0 15px rgba(72, 180, 120, 0.2);
+}
+
+.balance-negative {
+    color: #b44848 !important;
+    text-shadow: 0 0 15px rgba(180, 72, 72, 0.2);
+}
+
+/* Transição de entrada suave para novas linhas via AJAX */
+.fade-in-row {
+    animation: fadeInRow 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    background: rgba(226, 201, 133, 0.05) !important;
+}
+
+@keyframes fadeInRow {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.chart-container {
+    margin: 0 auto;
+}
+
+.table th {
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.form-select:focus,
+.form-control:focus {
+    box-shadow: none;
+    border-color: rgba(226, 201, 133, 0.3) !important;
+}

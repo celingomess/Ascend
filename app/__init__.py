@@ -26,11 +26,20 @@ def create_app():
     from app.dashboard.routes import dashboard_bp
     from app.goals.routes import goals_bp
     from app.profile.routes import profile_bp
+    from app.health.routes import health_bp
+    from app.finance.routes import finance_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(goals_bp)
     app.register_blueprint(profile_bp)
+    app.register_blueprint(health_bp)
+    app.register_blueprint(finance_bp)
+
+    # Carregar Modelos para que o Flask-Migrate os detecte
+    from app.models.nutrition import DailyNutrition
+    from app.models.workout import Workout, WorkoutExercise, WorkoutLog
+    from app.models.transaction import FinancialTransaction
 
     @login_manager.user_loader
     def load_user(user_id):

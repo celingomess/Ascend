@@ -1,0 +1,456 @@
+{% extends "layout.html" %}
+
+{% block title %}Performance & Saúde | Ascend{% endblock %}
+
+{% block extra_css %}
+<link href="{{ url_for('static', filename='css/health.css') }}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    
+    <!-- Cabeçalho -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <span class="badge-old mb-2">
+                <i class="bi bi-heart-pulse-fill"></i>
+                Performance Física
+            </span>
+            <h2 class="ascend-title mb-0">Saúde & Nutrição</h2>
+        </div>
+        <button type="button" class="btn btn-ascend" data-bs-toggle="modal" data-bs-target="#modalNovoTreino">
+            <i class="bi bi-plus-lg"></i> Novo Treino
+        </button>
+    </div>
+
+    <!-- Layout Dividido -->
+    <div class="row g-4">
+        
+        <!-- Painel de Nutrição & Hidratação (Esquerda) -->
+        <div class="col-lg-5 col-md-12">
+            <div class="ascend-card p-4 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h3 class="ascend-title mb-0" style="font-size: 1.3rem;">Foco Nutricional</h3>
+                    <button class="btn btn-sm btn-ascend-outline" data-bs-toggle="modal" data-bs-target="#modalConfigMeta">
+                        <i class="bi bi-gear"></i> Meta
+                    </button>
+                </div>
+
+                <!-- Anéis SVG de Calorias -->
+                <div class="d-flex align-items-center justify-content-center gap-4 flex-wrap mb-4">
+                    <div class="position-relative d-flex align-items-center justify-content-center" style="width: 180px; height: 180px;">
+                        <svg class="calorie-ring-svg" width="180" height="180" viewBox="0 0 180 180">
+                            <circle class="ring-bg" cx="90" cy="90" r="75" />
+                            <circle class="ring-active" cx="90" cy="90" r="75" 
+                                    style="stroke-dasharray: 471.2; stroke-dashoffset: {{ 471.2 - (471.2 * (nutrition.calorias_consumidas / (nutrition.calorias_meta or 2000))) if (nutrition.calorias_consumidas / (nutrition.calorias_meta or 2000)) <= 1 else 0 }};" />
+                        </svg>
+                        <div class="text-center position-absolute" style="top: 50%; left: 50%; transform: translate(-50%, -50%);">
+                            <span class="d-block text-muted small" style="font-size: 0.65rem; letter-spacing: 1px;">CONSUMIDO</span>
+                            <strong class="d-block fs-3 gold-text" id="lbl-calorias-consumidas">{{ nutrition.calorias_consumidas }}</strong>
+                            <span class="d-block text-muted small" style="font-size: 0.65rem;">de <span id="lbl-calorias-meta">{{ nutrition.calorias_meta }}</span> kcal</span>
+                        </div>
+                    </div>
+
+                    <!-- Progresso dos Macros -->
+                    <div class="flex-grow-1" style="min-width: 160px;">
+                        <!-- Proteína -->
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between mb-1" style="font-size: 0.8rem;">
+                                <span class="text-muted"><span class="macro-dot macro-p"></span> Proteínas</span>
+                                <strong><span id="lbl-macro-p">{{ nutrition.proteina }}</span>g</strong>
+                            </div>
+                            <div class="progress" style="height: 6px; background: rgba(255,255,255,0.05); border-radius: 99px;">
+                                <div class="progress-bar bg-primary" id="bar-macro-p" style="width: {{ (nutrition.proteina * 4 / (nutrition.calorias_meta or 2000)) * 100 }}%; border-radius: 99px;"></div>
+                            </div>
+                        </div>
+                        <!-- Carboidrato -->
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between mb-1" style="font-size: 0.8rem;">
+                                <span class="text-muted"><span class="macro-dot macro-c"></span> Carboidratos</span>
+                                <strong><span id="lbl-macro-c">{{ nutrition.carboidrato }}</span>g</strong>
+                            </div>
+                            <div class="progress" style="height: 6px; background: rgba(255,255,255,0.05); border-radius: 99px;">
+                                <div class="progress-bar bg-success" id="bar-macro-c" style="width: {{ (nutrition.carboidrato * 4 / (nutrition.calorias_meta or 2000)) * 100 }}%; border-radius: 99px;"></div>
+                            </div>
+                        </div>
+                        <!-- Gordura -->
+                        <div>
+                            <div class="d-flex justify-content-between mb-1" style="font-size: 0.8rem;">
+                                <span class="text-muted"><span class="macro-dot macro-f"></span> Gorduras</span>
+                                <strong><span id="lbl-macro-f">{{ nutrition.gordura }}</span>g</strong>
+                            </div>
+                            <div class="progress" style="height: 6px; background: rgba(255,255,255,0.05); border-radius: 99px;">
+                                <div class="progress-bar bg-warning" id="bar-macro-f" style="width: {{ (nutrition.gordura * 9 / (nutrition.calorias_meta or 2000)) * 100 }}%; border-radius: 99px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Formulário Rápido de Macros -->
+                <form id="form-add-nutrition" class="row g-2 mb-4 p-3 rounded" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(226,201,133,0.1);">
+                    <div class="col-12 mb-1">
+                        <span class="text-muted small" style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase;">Lançar refeição rápida</span>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <input type="number" class="form-control form-control-sm border-secondary text-white bg-transparent" name="calorias" placeholder="Kcal" min="0">
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <input type="number" class="form-control form-control-sm border-secondary text-white bg-transparent" name="proteina" placeholder="P (g)" min="0">
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <input type="number" class="form-control form-control-sm border-secondary text-white bg-transparent" name="carboidrato" placeholder="C (g)" min="0">
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <input type="number" class="form-control form-control-sm border-secondary text-white bg-transparent" name="gordura" placeholder="G (g)" min="0">
+                    </div>
+                    <div class="col-12 mt-2">
+                        <button type="submit" class="btn btn-sm btn-ascend w-100">Registrar Ingestão</button>
+                    </div>
+                </form>
+
+                <!-- Controle de Hidratação -->
+                <div class="hydration-container p-3 rounded" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(226,201,133,0.1);">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <span class="d-block text-muted small" style="font-size: 0.65rem; font-weight: 700;">CONTROLE DE ÁGUA</span>
+                            <strong class="fs-4 blue-text"><span id="lbl-agua">{{ nutrition.agua_ml }}</span> ml</strong>
+                        </div>
+                        <i class="bi bi-droplet-fill fs-3 blue-text animate-pulse"></i>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-sm btn-ascend-outline flex-grow-1" onclick="adicionarAgua(200)">
+                            +200ml <i class="bi bi-plus-lg"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-ascend-outline flex-grow-1" onclick="adicionarAgua(500)">
+                            +500ml <i class="bi bi-plus-lg"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Construtor e Ficha de Treinos (Direita) -->
+        <div class="col-lg-7 col-md-12">
+            <div class="ascend-card p-4 h-100">
+                <h3 class="ascend-title mb-4" style="font-size: 1.3rem;">Fichas de Treino Ativas</h3>
+
+                {% if not workouts %}
+                <div class="text-center py-5 border rounded" style="border: 1px dashed var(--border-color) !important;">
+                    <i class="bi bi-activity display-6 text-muted mb-3 d-block"></i>
+                    <h4 class="ascend-title mb-2">Nenhum treino cadastrado</h4>
+                    <p class="text-muted small">Crie seu primeiro treino para registrar suas cargas e rotinas.</p>
+                </div>
+                {% else %}
+                <div class="accordion accordion-premium" id="accordionTreinos">
+                    {% for workout in workouts %}
+                    <div class="accordion-item mb-3 rounded overflow-hidden" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(226,201,133,0.15);">
+                        <h2 class="accordion-header" id="heading-{{ workout.id }}">
+                            <button class="accordion-button collapsed px-4 py-3 text-white bg-transparent" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ workout.id }}" aria-expanded="false" aria-controls="collapse-{{ workout.id }}">
+                                <div class="d-flex justify-content-between align-items-center w-100 pe-3">
+                                    <div>
+                                        <strong class="d-block" style="font-size: 1.1rem; color: var(--cream);">{{ workout.nome }}</strong>
+                                        <span class="text-muted small">{{ workout.exercises | length }} exercícios cadastrados</span>
+                                    </div>
+                                </div>
+                            </button>
+                        </h2>
+                        <div id="collapse-{{ workout.id }}" class="accordion-collapse collapse" aria-labelledby="heading-{{ workout.id }}" data-bs-parent="#accordionTreinos">
+                            <div class="accordion-body p-4 border-top" style="border-top-color: rgba(226,201,133,0.15) !important;">
+                                
+                                <!-- Lista de Exercícios -->
+                                {% if not workout.exercises %}
+                                <div class="text-center py-3">
+                                    <p class="text-muted small mb-3">Nenhum exercício neste treino.</p>
+                                    <button class="btn btn-xs btn-ascend-outline" data-bs-toggle="modal" data-bs-target="#modalExercicio-{{ workout.id }}">
+                                        + Adicionar Exercício
+                                    </button>
+                                </div>
+                                {% else %}
+                                <div class="table-responsive mb-4">
+                                    <table class="table table-borderless align-middle text-white mb-0" style="font-size: 0.9rem;">
+                                        <thead>
+                                            <tr class="text-muted small border-bottom" style="border-bottom-color: rgba(226,201,133,0.1) !important;">
+                                                <th style="width: 50%;">Exercício</th>
+                                                <th style="width: 15%;">Séries</th>
+                                                <th style="width: 15%;">Reps</th>
+                                                <th style="width: 20%;" class="text-end">Carga (kg)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for ex in workout.exercises %}
+                                            <tr class="border-bottom" style="border-bottom-color: rgba(255,255,255,0.02) !important;">
+                                                <td>
+                                                    <strong class="d-block text-white">{{ ex.nome_exercicio }}</strong>
+                                                </td>
+                                                <td>{{ ex.series }}</td>
+                                                <td>{{ ex.repeticoes }}</td>
+                                                <td class="text-end">
+                                                    <div class="d-flex align-items-center justify-content-end gap-2">
+                                                        <input type="number" step="0.5" class="form-control form-control-sm border-secondary text-white bg-transparent text-end" style="width: 70px;" value="{{ ex.carga_atual }}" onchange="salvarCarga({{ ex.id }}, this.value)">
+                                                        <form action="{{ url_for('health.delete_exercise', exercise_id=ex.id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Deseja excluir este exercício?')">
+                                                            <button type="submit" class="btn btn-link text-danger p-0"><i class="bi bi-trash"></i></button>
+                                                        </form>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                    <button class="btn btn-sm btn-ascend-outline" data-bs-toggle="modal" data-bs-target="#modalExercicio-{{ workout.id }}">
+                                        <i class="bi bi-plus-lg"></i> Adicionar Exercício
+                                    </button>
+                                    <div class="d-flex gap-2">
+                                        <form action="{{ url_for('health.delete_workout', workout_id=workout.id) }}" method="POST" onsubmit="return confirm('Deseja excluir este treino?')">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">Excluir Ficha</button>
+                                        </form>
+                                        <button class="btn btn-sm btn-ascend" onclick="concluirTreino({{ workout.id }})">
+                                            <i class="bi bi-check2-circle"></i> Concluir Treino
+                                        </button>
+                                    </div>
+                                </div>
+                                {% endif %}
+
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Modal Adicionar Exercício -->
+                    <div class="modal fade" id="modalExercicio-{{ workout.id }}" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content" style="background: #0d1611; border: 1px solid var(--border-color); border-radius: 24px;">
+                                <div class="modal-header border-0 px-4 pt-4">
+                                    <h4 class="modal-title text-white">Adicionar Exercício a {{ workout.nome }}</h4>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <form action="{{ url_for('health.add_exercise', workout_id=workout.id) }}" method="POST">
+                                    <div class="modal-body px-4">
+                                        <div class="mb-3">
+                                            <label class="form-label text-muted">Nome do Exercício</label>
+                                            <input type="text" class="form-control bg-transparent text-white border-secondary" name="nome_exercicio" placeholder="Ex: Cross Polia Alta" required>
+                                        </div>
+                                        <div class="row g-2">
+                                            <div class="col-4">
+                                                <label class="form-label text-muted">Séries</label>
+                                                <input type="number" class="form-control bg-transparent text-white border-secondary" name="series" value="4" required>
+                                            </div>
+                                            <div class="col-4">
+                                                <label class="form-label text-muted">Repetições</label>
+                                                <input type="text" class="form-control bg-transparent text-white border-secondary" name="repeticoes" value="8-12" required>
+                                            </div>
+                                            <div class="col-4">
+                                                <label class="form-label text-muted">Carga (kg)</label>
+                                                <input type="number" step="0.5" class="form-control bg-transparent text-white border-secondary" name="carga" value="0" required>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer border-0 px-4 pb-4">
+                                        <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">Cancelar</button>
+                                        <button type="submit" class="btn btn-ascend">Salvar Exercício</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Modal Novo Treino -->
+<div class="modal fade" id="modalNovoTreino" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background: #0d1611; border: 1px solid var(--border-color); border-radius: 24px;">
+            <div class="modal-header border-0 px-4 pt-4">
+                <h4 class="modal-title text-white">Criar Nova Ficha de Treino</h4>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('health.create_workout') }}" method="POST">
+                <div class="modal-body px-4">
+                    <div class="mb-3">
+                        <label class="form-label text-muted">Nome da Ficha</label>
+                        <input type="text" class="form-control bg-transparent text-white border-secondary" name="nome" placeholder="Ex: Push Day - Peito/Ombro/Tríceps" required>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4">
+                    <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-ascend">Criar Treino</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Configurar Meta -->
+<div class="modal fade" id="modalConfigMeta" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background: #0d1611; border: 1px solid var(--border-color); border-radius: 24px;">
+            <div class="modal-header border-0 px-4 pt-4">
+                <h4 class="modal-title text-white">Configurar Meta Diária de Calorias</h4>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="form-config-meta">
+                <div class="modal-body px-4">
+                    <div class="mb-3">
+                        <label class="form-label text-muted">Calorias Recomendadas para Evolução</label>
+                        <input type="number" class="form-control bg-transparent text-white border-secondary" name="calorias_meta" value="{{ nutrition.calorias_meta }}" required>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4">
+                    <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-ascend">Salvar Alteração</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts Dinâmicos -->
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+<script>
+    // Submeter formulário de Macros via AJAX
+    document.getElementById("form-add-nutrition").addEventListener("submit", function(e) {
+        e.preventDefault();
+        
+        const form = this;
+        const formData = new FormData(form);
+        
+        // Efeito sonoro de clique
+        if (typeof AscendSFX !== 'undefined') AscendSFX.playClick();
+        
+        fetch("{{ url_for('health.add_nutrition') }}", {
+            method: "POST",
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Atualizar labels
+                document.getElementById("lbl-calorias-consumidas").innerText = data.calorias_consumidas;
+                document.getElementById("lbl-macro-p").innerText = data.proteina;
+                document.getElementById("lbl-macro-c").innerText = data.carboidrato;
+                document.getElementById("lbl-macro-f").innerText = data.gordura;
+                document.getElementById("lbl-agua").innerText = data.agua_ml;
+                
+                // Calcular novas porcentagens
+                const limit = data.calorias_meta || 2000;
+                
+                // Atualizar anel SVG
+                const offset = 471.2 - (471.2 * (data.calorias_consumidas / limit));
+                document.querySelector(".ring-active").style.strokeDashoffset = Math.max(0, offset);
+                
+                // Atualizar barras de macros
+                document.getElementById("bar-macro-p").style.width = ((data.proteina * 4 / limit) * 100) + "%";
+                document.getElementById("bar-macro-c").style.width = ((data.carboidrato * 4 / limit) * 100) + "%";
+                document.getElementById("bar-macro-f").style.width = ((data.gordura * 9 / limit) * 100) + "%";
+                
+                // Gamificação de bater a meta de calorias
+                if (data.meta_atingida && typeof confetti !== 'undefined') {
+                    if (typeof AscendSFX !== 'undefined') AscendSFX.playSuccess();
+                    confetti({
+                        particleCount: 100,
+                        spread: 70,
+                        origin: { y: 0.6 }
+                    });
+                }
+                
+                // Limpar campos
+                form.reset();
+            } else {
+                alert("Erro ao salvar: " + data.message);
+            }
+        });
+    });
+
+    // Submeter nova meta
+    document.getElementById("form-config-meta").addEventListener("submit", function(e) {
+        e.preventDefault();
+        
+        const form = this;
+        const formData = new FormData(form);
+        
+        fetch("{{ url_for('health.update_nutrition_meta') }}", {
+            method: "POST",
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById("lbl-calorias-meta").innerText = data.calorias_meta;
+                const offset = 471.2 - (471.2 * (data.calorias_consumidas / data.calorias_meta));
+                document.querySelector(".ring-active").style.strokeDashoffset = Math.max(0, offset);
+                
+                const bootstrapModal = bootstrap.Modal.getInstance(document.getElementById('modalConfigMeta'));
+                bootstrapModal.hide();
+            }
+        });
+    });
+
+    // Adicionar água via AJAX
+    function adicionarAgua(ml) {
+        const formData = new FormData();
+        formData.append("agua", ml);
+        
+        // Efeito sonoro de clique / hidratação
+        if (typeof AscendSFX !== 'undefined') AscendSFX.playClick();
+
+        fetch("{{ url_for('health.add_nutrition') }}", {
+            method: "POST",
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById("lbl-agua").innerText = data.agua_ml;
+            }
+        });
+    }
+
+    // Salvar carga do exercício via AJAX
+    function salvarCarga(exId, value) {
+        const formData = new FormData();
+        formData.append("carga", value);
+
+        fetch(`/saude/exercicio/${exId}/carga`, {
+            method: "POST",
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Brilho rápido no input para dar feedback visual
+                if (typeof AscendSFX !== 'undefined') AscendSFX.playClick();
+            }
+        });
+    }
+
+    // Concluir treino
+    function concluirTreino(workoutId) {
+        fetch(`/saude/treino/${workoutId}/concluir`, {
+            method: "POST"
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                if (typeof AscendSFX !== 'undefined') AscendSFX.playSuccess();
+                if (typeof confetti !== 'undefined') {
+                    confetti({
+                        particleCount: 150,
+                        spread: 80,
+                        origin: { y: 0.6 }
+                    });
+                }
+                alert(data.mensagem + " (+ " + data.xp_ganho + " XP!)");
+                window.location.reload();
+            } else {
+                alert("Erro ao concluir treino: " + data.message);
+            }
+        });
+    }
+</script>
+{% endblock %}

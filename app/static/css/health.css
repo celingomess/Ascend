@@ -1,0 +1,88 @@
+/* ===================================
+   HEALTH & NUTRIÇÃO STYLE SHEET
+=================================== */
+
+.calorie-ring-svg {
+    transform: rotate(-90deg);
+}
+
+.ring-bg {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.03);
+    stroke-width: 10;
+}
+
+.ring-active {
+    fill: none;
+    stroke: var(--gold-soft);
+    stroke-width: 10;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.8s ease-in-out;
+}
+
+.macro-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 6px;
+}
+
+.macro-p {
+    background-color: var(--bs-primary);
+}
+
+.macro-c {
+    background-color: var(--bs-success);
+}
+
+.macro-f {
+    background-color: var(--bs-warning);
+}
+
+.blue-text {
+    color: #4b88be !important;
+}
+
+.animate-pulse {
+    animation: dropletPulse 2s infinite ease-in-out;
+}
+
+@keyframes dropletPulse {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 0.8;
+    }
+    50% {
+        transform: scale(1.15);
+        opacity: 1;
+        text-shadow: 0 0 10px rgba(75, 136, 190, 0.5);
+    }
+}
+
+/* Accordion Customizations */
+.accordion-premium .accordion-button::after {
+    filter: invert(1) sepia(1) saturate(5) hue-rotate(30deg); /* Dourado */
+}
+
+.accordion-premium .accordion-button:not(.collapsed) {
+    background: rgba(226, 201, 133, 0.05) !important;
+    box-shadow: none;
+}
+
+.accordion-premium .accordion-button:focus {
+    box-shadow: none;
+    border-color: rgba(226, 201, 133, 0.25);
+}
+
+.table th {
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.btn-xs {
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    border-radius: 99px;
+}

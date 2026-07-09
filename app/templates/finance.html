@@ -1,0 +1,324 @@
+{% extends "layout.html" %}
+
+{% block title %}Finanças Pessoais | Ascend{% endblock %}
+
+{% block extra_css %}
+<link href="{{ url_for('static', filename='css/finance.css') }}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    
+    <!-- Cabeçalho -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <span class="badge-old mb-2">
+                <i class="bi bi-bank"></i>
+                Evolução Patrimonial
+            </span>
+            <h2 class="ascend-title mb-0">Gestão Financeira</h2>
+        </div>
+    </div>
+
+    <!-- Indicadores no Topo -->
+    <div class="row g-3 mb-4">
+        <!-- Saldo -->
+        <div class="col-md-4">
+            <div class="ascend-card p-4 text-center d-flex flex-column justify-content-center h-100">
+                <span class="text-muted small" style="font-size: 0.75rem; font-weight: 700; letter-spacing: 2px;">SALDO GLOBAL</span>
+                <strong class="display-6 mt-2 {% if saldo_total >= 0 %}balance-positive{% else %}balance-negative{% endif %}" id="lbl-saldo-total">
+                    R$ {{ "%.2f" | format(saldo_total) }}
+                </strong>
+            </div>
+        </div>
+        <!-- Entradas do Mês -->
+        <div class="col-md-4">
+            <div class="ascend-card p-4 text-center d-flex flex-column justify-content-center h-100">
+                <span class="text-muted small" style="font-size: 0.75rem; font-weight: 700; letter-spacing: 2px;">ENTRADAS (MÊS)</span>
+                <strong class="display-6 mt-2 text-success" id="lbl-entradas-mes">
+                    R$ {{ "%.2f" | format(entradas_mes) }}
+                </strong>
+            </div>
+        </div>
+        <!-- Saídas do Mês -->
+        <div class="col-md-4">
+            <div class="ascend-card p-4 text-center d-flex flex-column justify-content-center h-100">
+                <span class="text-muted small" style="font-size: 0.75rem; font-weight: 700; letter-spacing: 2px;">SAÍDAS (MÊS)</span>
+                <strong class="display-6 mt-2 text-danger" id="lbl-saidas-mes">
+                    R$ {{ "%.2f" | format(saidas_mes) }}
+                </strong>
+            </div>
+        </div>
+    </div>
+
+    <!-- Layout Dividido -->
+    <div class="row g-4">
+        
+        <!-- Formulários & Gráfico (Esquerda) -->
+        <div class="col-lg-5 col-md-12">
+            <div class="ascend-card p-4 mb-4">
+                <h3 class="ascend-title mb-4" style="font-size: 1.25rem;">Lançamento Rápido (IA Parser)</h3>
+                
+                <!-- Quick Logger Form -->
+                <form id="form-quick-log" class="mb-4">
+                    <div class="input-group">
+                        <input type="text" class="form-control bg-transparent text-white border-secondary" name="quick_log" placeholder="Ex: -32 Almoço ou +500 Venda" required>
+                        <button class="btn btn-ascend" type="submit">Gravar</button>
+                    </div>
+                    <small class="text-muted mt-2 d-block" style="font-size: 0.75rem;">
+                        <i class="bi bi-info-circle"></i> O sistema detectará o valor, descrição e categoria automaticamente!
+                    </small>
+                </form>
+
+                <hr style="border-color: rgba(226,201,133,0.15);">
+
+                <h3 class="ascend-title my-4" style="font-size: 1.25rem;">Distribuição de Gastos</h3>
+                <!-- Gráfico Chart.js -->
+                <div class="chart-container position-relative" style="height: 220px; width: 100%;">
+                    <canvas id="chartFinanceCategorias"></canvas>
+                </div>
+            </div>
+            
+            <!-- Modal/Formulário Manual Opcional -->
+            <div class="ascend-card p-4">
+                <h3 class="ascend-title mb-4" style="font-size: 1.25rem;">Lançar Manualmente</h3>
+                <form id="form-manual-log" class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label text-muted">Valor (R$)</label>
+                        <input type="number" step="0.01" class="form-control bg-transparent text-white border-secondary" name="valor" placeholder="0.00" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted">Tipo</label>
+                        <select class="form-select bg-dark text-white border-secondary" name="tipo">
+                            <option value="saida">Saída / Despesa</option>
+                            <option value="entrada">Entrada / Receita</option>
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label text-muted">Descrição</label>
+                        <input type="text" class="form-control bg-transparent text-white border-secondary" name="descricao" placeholder="Ex: Assinatura Netflix" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted">Categoria</label>
+                        <select class="form-select bg-dark text-white border-secondary" name="categoria">
+                            <option value="Alimentação">Alimentação</option>
+                            <option value="Transporte">Transporte</option>
+                            <option value="Moradia">Moradia</option>
+                            <option value="Lazer">Lazer</option>
+                            <option value="Saúde">Saúde</option>
+                            <option value="Investimentos">Investimentos</option>
+                            <option value="Receita">Receita</option>
+                            <option value="Outros" selected>Outros</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted">Data</label>
+                        <input type="date" class="form-control bg-transparent text-white border-secondary" name="data" id="manual-data">
+                    </div>
+                    <div class="col-12 mt-4">
+                        <button type="submit" class="btn btn-ascend w-100">Registrar Transação</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Histórico (Direita) -->
+        <div class="col-lg-7 col-md-12">
+            <div class="ascend-card p-4 h-100">
+                <h3 class="ascend-title mb-4" style="font-size: 1.25rem;">Extrato de Evolução Financeira</h3>
+
+                <div class="table-responsive">
+                    <table class="table table-borderless align-middle text-white mb-0" style="font-size: 0.92rem;">
+                        <thead>
+                            <tr class="text-muted border-bottom" style="border-bottom-color: rgba(226,201,133,0.15) !important;">
+                                <th style="width: 20%;">Data</th>
+                                <th style="width: 40%;">Descrição</th>
+                                <th style="width: 20%;">Categoria</th>
+                                <th style="width: 20%;" class="text-end">Valor</th>
+                            </tr>
+                        </thead>
+                        <tbody id="extrato-corpo">
+                            {% if not transactions %}
+                            <tr id="row-empty-state">
+                                <td colspan="4" class="text-center py-5 text-muted">
+                                    Nenhuma transação cadastrada.
+                                </td>
+                            </tr>
+                            {% else %}
+                                {% for t in transactions %}
+                                <tr class="border-bottom" style="border-bottom-color: rgba(255,255,255,0.02) !important;">
+                                    <td class="text-muted">{{ t.data.strftime('%d/%m/%Y') }}</td>
+                                    <td>
+                                        <strong class="d-block text-white">{{ t.descricao }}</strong>
+                                    </td>
+                                    <td>
+                                        <span class="badge-old text-white" style="font-size: 0.68rem; border-color: rgba(255,255,255,0.15);">{{ t.categoria }}</span>
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="d-flex align-items-center justify-content-end gap-2">
+                                            <strong class="{% if t.valor > 0 %}text-success{% else %}text-danger{% endif %}">
+                                                {% if t.valor > 0 %}+{% endif %}R$ {{ "%.2f" | format(t.valor) }}
+                                            </strong>
+                                            <form action="{{ url_for('finance.delete_transaction', transaction_id=t.id) }}" method="POST" style="display:inline;">
+                                                <button type="submit" class="btn btn-link text-danger p-0"><i class="bi bi-trash"></i></button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Configurar data padrão no formulário manual como hoje
+    document.getElementById("manual-data").valueAsDate = new Date();
+
+    // Chart.js Setup
+    const ctx = document.getElementById('chartFinanceCategorias').getContext('2d');
+    let dadosCategorias = {{ dados_categorias | tojson }};
+    
+    let chartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: dadosCategorias.labels,
+            datasets: [{
+                data: dadosCategorias.valores,
+                backgroundColor: [
+                    'rgba(180, 72, 72, 0.8)', // Alimentação
+                    'rgba(75, 116, 190, 0.8)', // Transporte
+                    'rgba(150, 96, 190, 0.8)', // Moradia
+                    'rgba(226, 201, 133, 0.8)', // Lazer
+                    'rgba(72, 180, 120, 0.8)', // Saúde
+                    'rgba(184, 122, 63, 0.8)'   // Outros
+                ],
+                borderColor: 'rgba(7, 17, 12, 0.95)',
+                borderWidth: 2,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        color: '#a89f91',
+                        font: { size: 10, family: 'Manrope' },
+                        boxWidth: 8
+                    }
+                }
+            }
+        }
+    });
+
+    // Função comum para lidar com o retorno do AJAX e atualizar a página
+    function handleAJAXResponse(data) {
+        if (data.success) {
+            // Tocar som de moedas caindo (cash/coins)
+            if (typeof AscendSFX !== 'undefined' && typeof AscendSFX.playCash === 'function') {
+                AscendSFX.playCash();
+            } else if (typeof AscendSFX !== 'undefined') {
+                AscendSFX.playClick();
+            }
+            
+            // 1. Atualizar cards superiores
+            const lblSaldo = document.getElementById("lbl-saldo-total");
+            lblSaldo.innerText = `R$ ${data.saldo_total.toFixed(2)}`;
+            lblSaldo.className = "display-6 mt-2 " + (data.saldo_total >= 0 ? "balance-positive" : "balance-negative");
+            
+            document.getElementById("lbl-entradas-mes").innerText = `R$ ${data.entradas_mes.toFixed(2)}`;
+            document.getElementById("lbl-saidas-mes").innerText = `R$ ${data.saidas_mes.toFixed(2)}`;
+            
+            // 2. Inserir a nova linha no topo do extrato
+            const extratoCorpo = document.getElementById("extrato-corpo");
+            const emptyState = document.getElementById("row-empty-state");
+            if (emptyState) emptyState.remove();
+            
+            const isPositive = data.valor > 0;
+            const sign = isPositive ? "+" : "";
+            const textClass = isPositive ? "text-success" : "text-danger";
+            
+            const newRow = document.createElement("tr");
+            newRow.className = "border-bottom fade-in-row";
+            newRow.style.borderBottomColor = "rgba(255,255,255,0.02)";
+            
+            newRow.innerHTML = `
+                <td class="text-muted">${data.data}</td>
+                <td><strong class="d-block text-white">${data.descricao}</strong></td>
+                <td><span class="badge-old text-white" style="font-size: 0.68rem; border-color: rgba(255,255,255,0.15);">${data.categoria}</span></td>
+                <td class="text-end">
+                    <div class="d-flex align-items-center justify-content-end gap-2">
+                        <strong class="${textClass}">${sign}R$ ${Math.abs(data.valor).toFixed(2)}</strong>
+                        <button class="btn btn-link text-danger p-0" onclick="window.location.reload()"><i class="bi bi-arrow-clockwise"></i></button>
+                    </div>
+                </td>
+            `;
+            extratoCorpo.insertBefore(newRow, extratoCorpo.firstChild);
+
+            // 3. Atualizar o Gráfico de Despesas (se for despesa)
+            if (data.valor < 0) {
+                const absoluteVal = Math.abs(data.valor);
+                const labelIdx = chartInstance.data.labels.indexOf(data.categoria);
+                if (labelIdx > -1) {
+                    chartInstance.data.datasets[0].data[labelIdx] += absoluteVal;
+                } else {
+                    chartInstance.data.labels.push(data.categoria);
+                    chartInstance.data.datasets[0].data.push(absoluteVal);
+                }
+                chartInstance.update();
+            }
+
+            // Exibir toast ou aviso de XP
+            if (data.nivel_subiu) {
+                alert(`Subiu de Nível! Nível ${data.usuario_nivel} (+ ${data.xp_ganho} XP)`);
+            }
+        } else {
+            alert("Erro ao gravar: " + data.message);
+        }
+    }
+
+    // Formulário manual
+    document.getElementById("form-manual-log").addEventListener("submit", function(e) {
+        e.preventDefault();
+        const form = this;
+        const formData = new FormData(form);
+
+        fetch("{{ url_for('finance.add_transaction') }}", {
+            method: "POST",
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            handleAJAXResponse(data);
+            form.reset();
+            document.getElementById("manual-data").valueAsDate = new Date();
+        });
+    });
+
+    // Formulário de IA Logger Rápido
+    document.getElementById("form-quick-log").addEventListener("submit", function(e) {
+        e.preventDefault();
+        const form = this;
+        const formData = new FormData(form);
+
+        fetch("{{ url_for('finance.add_transaction') }}", {
+            method: "POST",
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            handleAJAXResponse(data);
+            form.reset();
+        });
+    });
+</script>
+{% endblock %}

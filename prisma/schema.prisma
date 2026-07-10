@@ -1,0 +1,209 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model achievement_definitions {
+  id                  Int     @id @default(autoincrement())
+  titulo              String  @db.VarChar(100)
+  descricao           String? @db.VarChar(255)
+  categoria           String? @db.VarChar(50)
+  nivel               Int?
+  raridade            String? @db.VarChar(30)
+  xp                  Int?
+  tarefas_requeridas  Int?
+  jornadas_requeridas Int?
+  dias_consistencia   Int?
+}
+
+model achievements {
+  id               Int       @id @default(autoincrement())
+  titulo           String    @db.VarChar(100)
+  descricao        String?   @db.VarChar(255)
+  icone            String?   @db.VarChar(50)
+  user_id          Int?
+  xp               Int?
+  raridade         String?   @db.VarChar(30)
+  data_desbloqueio DateTime? @db.DateTime(0)
+
+  @@index([user_id], map: "user_id")
+}
+
+model alembic_version {
+  version_num String @id @db.VarChar(32)
+}
+
+model daily_nutrition {
+  id                  Int      @id @default(autoincrement())
+  user_id             Int
+  data                DateTime @db.Date
+  calorias_consumidas Int?
+  calorias_meta       Int?
+  proteina            Int?
+  carboidrato         Int?
+  gordura             Int?
+  agua_ml             Int?
+
+  @@index([user_id], map: "user_id")
+}
+
+model financial_transactions {
+  id        Int      @id @default(autoincrement())
+  user_id   Int
+  valor     Float    @db.Float
+  descricao String   @db.VarChar(255)
+  categoria String   @db.VarChar(100)
+  data      DateTime @db.Date
+
+  @@index([user_id], map: "user_id")
+}
+
+model goal_block_item_options {
+  id          Int       @id @default(autoincrement())
+  item_id     Int
+  texto       String    @db.VarChar(200)
+  selecionado Boolean?
+  ordem       Int?
+  criado_em   DateTime? @db.DateTime(0)
+
+  @@index([item_id], map: "item_id")
+}
+
+model goal_block_items {
+  id                     Int       @id @default(autoincrement())
+  block_id               Int
+  titulo                 String    @db.VarChar(200)
+  concluido              Boolean?
+  ordem                  Int?
+  criado_em              DateTime? @db.DateTime(0)
+  tipo                   String    @db.VarChar(30)
+  subtipo                String?   @db.VarChar(30)
+  conteudo               String?   @db.Text
+  data_item              DateTime? @db.Date
+  valor                  String?   @db.VarChar(100)
+  arquivo                String?   @db.VarChar(255)
+  parent_id              Int?
+  frequencia             String?   @db.VarChar(20)
+  meta_valor             Int?
+  valor_atual            Int?
+  ultima_atividade       DateTime? @db.DateTime(0)
+  streak_atual           Int?
+  melhor_streak          Int?
+  ultima_data_streak     DateTime? @db.Date
+  ultima_reinicializacao DateTime? @db.DateTime(0)
+
+  @@index([block_id], map: "block_id")
+  @@index([parent_id], map: "parent_id")
+}
+
+model goal_blocks {
+  id        Int       @id @default(autoincrement())
+  goal_id   Int
+  ordem     Int?
+  criado_em DateTime? @db.DateTime(0)
+  titulo    String    @db.VarChar(150)
+  descricao String?   @db.Text
+
+  @@index([goal_id], map: "goal_id")
+}
+
+model goal_progress {
+  id        Int       @id @default(autoincrement())
+  block_id  Int
+  titulo    String    @db.VarChar(200)
+  descricao String?   @db.Text
+  unidade   String?   @db.VarChar(50)
+  ordem     Int?
+  criado_em DateTime? @db.DateTime(0)
+
+  @@index([block_id], map: "block_id")
+}
+
+model goal_progress_steps {
+  id          Int       @id @default(autoincrement())
+  progress_id Int
+  titulo      String    @db.VarChar(200)
+  descricao   String?   @db.Text
+  concluido   Boolean?
+  ordem       Int?
+  criado_em   DateTime? @db.DateTime(0)
+
+  @@index([progress_id], map: "progress_id")
+}
+
+model goals {
+  id           Int       @id @default(autoincrement())
+  user_id      Int
+  titulo       String    @db.VarChar(150)
+  descricao    String?   @db.Text
+  categoria    String    @db.VarChar(50)
+  status       String?   @db.VarChar(30)
+  prazo        DateTime? @db.Date
+  progresso    Int?
+  data_criacao DateTime? @db.DateTime(0)
+  cover_image  String?   @db.VarChar(255)
+
+  @@index([user_id], map: "user_id")
+}
+
+model user_events {
+  id        Int       @id @default(autoincrement())
+  user_id   Int
+  titulo    String    @db.VarChar(255)
+  descricao String?   @db.Text
+  tipo      String    @db.VarChar(50)
+  xp        Int?
+  criado_em DateTime? @db.DateTime(0)
+
+  @@index([user_id], map: "user_id")
+}
+
+model users {
+  id               Int       @id @default(autoincrement())
+  nome             String    @db.VarChar(100)
+  email            String    @unique(map: "email") @db.VarChar(150)
+  senha_hash       String    @db.VarChar(255)
+  nivel            Int?
+  xp_total         Int?
+  data_cadastro    DateTime? @db.DateTime(0)
+  avatar           String?   @db.VarChar(255)
+  streak_atual     Int?
+  melhor_streak    Int?
+  ultima_atividade DateTime? @db.Date
+}
+
+model workout_exercises {
+  id             Int     @id @default(autoincrement())
+  workout_id     Int
+  nome_exercicio String  @db.VarChar(200)
+  series         Int?
+  repeticoes     String? @db.VarChar(50)
+  carga_atual    Float?  @db.Float
+  ordem          Int?
+
+  @@index([workout_id], map: "workout_id")
+}
+
+model workout_logs {
+  id             Int      @id @default(autoincrement())
+  user_id        Int
+  workout_id     Int
+  data_conclusao DateTime @db.Date
+
+  @@index([user_id], map: "user_id")
+  @@index([workout_id], map: "workout_id")
+}
+
+model workouts {
+  id          Int       @id @default(autoincrement())
+  user_id     Int
+  nome        String    @db.VarChar(150)
+  dias_semana String?   @db.VarChar(100)
+  conteudo    String?   @db.Text
+  criado_em   DateTime? @db.DateTime(0)
+
+  @@index([user_id], map: "user_id")
+}

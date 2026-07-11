@@ -14,15 +14,15 @@
 }
 
 body {
-    min-height: 100vh;
+    min-height: 100vh !important;
     background:
         radial-gradient(circle at 16% 12%, rgba(216, 189, 115, 0.13), transparent 28%),
         radial-gradient(circle at 86% 8%, rgba(255, 255, 255, 0.05), transparent 24%),
         radial-gradient(circle at 50% 100%, rgba(216, 189, 115, 0.07), transparent 28%),
-        var(--hall-bg);
-    color: var(--hall-text);
-    font-family: "Inter", system-ui, sans-serif;
-    overflow-x: hidden;
+        var(--hall-bg) !important;
+    color: var(--hall-text) !important;
+    font-family: "Inter", system-ui, sans-serif !important;
+    overflow-x: hidden !important;
 }
 
 .hall-page {

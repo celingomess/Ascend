@@ -36,16 +36,16 @@ html {
 }
 
 body {
-    min-height: 100vh;
-    margin: 0;
-    font-family: 'Manrope', sans-serif;
-    color: var(--cream);
+    min-height: 100vh !important;
+    margin: 0 !important;
+    font-family: 'Manrope', sans-serif !important;
+    color: var(--cream) !important;
     background:
         radial-gradient(circle at 12% 8%, rgba(226, 201, 133, .13), transparent 28%),
         radial-gradient(circle at 85% 18%, rgba(255, 250, 240, .035), transparent 26%),
         radial-gradient(circle at 80% 90%, rgba(36, 61, 44, .45), transparent 34%),
-        linear-gradient(135deg, #030604 0%, var(--green-black) 34%, var(--green-deep) 68%, #020403 100%);
-    overflow-x: hidden;
+        linear-gradient(135deg, #030604 0%, var(--green-black) 34%, var(--green-deep) 68%, #020403 100%) !important;
+    overflow-x: hidden !important;
 }
 
 body::before {

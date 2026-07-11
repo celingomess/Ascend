@@ -1041,5 +1041,17 @@
     }
 }
 
+@media (max-width: 480px) {
+    .dashboard-rank-progress .d-flex {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 2px !important;
+    }
+    
+    .dashboard-rank-progress .d-flex span:last-child {
+        margin-top: 2px !important;
+    }
+}
+
 
 

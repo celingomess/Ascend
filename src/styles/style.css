@@ -1316,4 +1316,39 @@ select.form-select,
 .table input:focus {
     border-color: var(--gold-soft) !important;
     box-shadow: 0 0 10px rgba(226, 201, 133, 0.15) !important;
+}
+
+/* ==========================================================================
+   GLOBAL UI/UX COHESION AND MOBILE LAYOUT REFINEMENTS
+   ========================================================================== */
+
+/* Padronização de cantos arredondados (border-radius) */
+.form-control,
+.form-select,
+.btn,
+.badge-old,
+.road-subrank {
+    border-radius: 12px !important;
+}
+
+/* Garante tamanhos consistentes para inputs */
+.form-control,
+.form-select {
+    padding: 10px 14px !important;
+    font-size: 0.9rem !important;
+    border-color: rgba(226, 201, 133, 0.18) !important;
+    background-color: rgba(255, 250, 240, 0.02) !important;
+}
+
+/* Feedback visual imersivo para inputs inválidos/erros em foco */
+.form-control:invalid:focus {
+    border-color: rgba(180, 72, 72, 0.5) !important;
+    box-shadow: 0 0 10px rgba(180, 72, 72, 0.15) !important;
+}
+
+/* Evitar esmagamento de colunas em tabelas mobile */
+@media (max-width: 576px) {
+    .table-responsive .table {
+        min-width: 480px !important;
+    }
 }

@@ -58,6 +58,7 @@ export default function PerfilClientInitial({
   dominiosAscensao,
 }: PerfilClientInitialProps) {
   const [rankTab, setRankTab] = useState<"global" | "areas">("global");
+  const [expandedRanks, setExpandedRanks] = useState<Record<string, boolean>>({});
   const [selectedAreaRank, setSelectedAreaRank] = useState<string>(
     dominiosAscensao[0]?.nome || "Carreira"
   );
@@ -293,33 +294,74 @@ export default function PerfilClientInitial({
                 <div className="profile-ranks-road d-flex flex-column gap-3">
                   {Object.entries(progressaoRanque.grupos).map(([categoria, subranques]: any) => {
                     const isUnlocked = subranques.some((sub: any) => sub.desbloqueado);
+                    const isExpanded = isUnlocked || !!expandedRanks[categoria];
 
                     return (
-                      <div key={categoria} className={`road-group-card p-3 rounded ${isUnlocked ? "unlocked" : ""}`} style={{ background: "rgba(255,255,255,0.01)", border: "1px solid rgba(255,255,255,0.03)" }}>
-                        <h3 className="road-group-title text-white mb-2" style={{ fontSize: "1rem" }}>{categoria}</h3>
-                        <div className="road-subranks d-flex gap-3 flex-wrap">
-                          {subranques.map((sub: any, idx: number) => (
-                            <div
-                              key={idx}
-                              className={`road-subrank p-2 rounded small ${
-                                sub.atual ? "active border border-warning" : sub.desbloqueado ? "unlocked" : "locked"
-                              }`}
-                              style={{ background: "rgba(0,0,0,0.15)", opacity: sub.desbloqueado || sub.atual ? 1 : 0.4 }}
-                            >
-                              <span className="road-subrank-name">
-                                {sub.atual ? (
-                                  <i className="bi bi-pin-angle-fill me-1 text-warning"></i>
-                                ) : sub.desbloqueado ? (
-                                  <i className="bi bi-check-circle-fill me-1 text-success"></i>
-                                ) : (
-                                  <i className="bi bi-lock-fill me-1"></i>
-                                )}
-                                {sub.nome}
-                              </span>
-                              <span className="road-subrank-xp d-block text-muted" style={{ fontSize: "0.68rem" }}>{sub.xp_minimo} XP</span>
-                            </div>
-                          ))}
+                      <div
+                        key={categoria}
+                        className={`road-group-card p-3 rounded ${isUnlocked ? "unlocked" : ""}`}
+                        style={{
+                          background: "rgba(255,255,255,0.01)",
+                          border: "1px solid rgba(255,255,255,0.03)",
+                        }}
+                      >
+                        <div
+                          className="d-flex justify-content-between align-items-center mb-2"
+                          style={{ cursor: isUnlocked ? "default" : "pointer" }}
+                          onClick={() => {
+                            if (!isUnlocked) {
+                              setExpandedRanks((prev) => ({
+                                ...prev,
+                                [categoria]: !prev[categoria],
+                              }));
+                            }
+                          }}
+                        >
+                          <h3 className="road-group-title text-white mb-0" style={{ fontSize: "1rem" }}>
+                            {categoria}
+                          </h3>
+                          {!isUnlocked && (
+                            <span className="text-muted small" style={{ fontSize: "0.75rem", userSelect: "none" }}>
+                              {isExpanded ? (
+                                <>
+                                  Ocultar <i className="bi bi-chevron-up ms-1"></i>
+                                </>
+                              ) : (
+                                <>
+                                  Expandir <i className="bi bi-chevron-down ms-1"></i>
+                                </>
+                              )}
+                            </span>
+                          )}
                         </div>
+
+                        {isExpanded && (
+                          <div className="road-subranks d-flex gap-3 flex-wrap">
+                            {subranques.map((sub: any, idx: number) => (
+                              <div
+                                key={idx}
+                                className={`road-subrank p-2 rounded small ${
+                                  sub.atual ? "active border border-warning" : sub.desbloqueado ? "unlocked" : "locked"
+                                }`}
+                                style={{ background: "rgba(0,0,0,0.15)", opacity: sub.desbloqueado || sub.atual ? 1 : 0.4 }}
+                              >
+                                <span className="road-subrank-name">
+                                  {sub.atual ? (
+                                    <i className="bi bi-pin-angle-fill me-1 text-warning"></i>
+                                  ) : sub.desbloqueado ? (
+                                    <i className="bi bi-check-circle-fill me-1 text-success"></i>
+                                  ) : (
+                                    <i className="bi bi-lock-fill me-1"></i>
+                                  )}
+                                  {sub.nome}
+                                </span>
+                                <span className="road-subrank-xp d-block text-muted" style={{ fontSize: "0.68rem" }}>
+                                  {sub.xp_minimo} XP
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     );
                   })}

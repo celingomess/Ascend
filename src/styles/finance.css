@@ -31,6 +31,9 @@
 
 .chart-container {
     margin: 0 auto;
+    min-height: 220px !important;
+    position: relative !important;
+    display: block !important;
 }
 
 .table th {

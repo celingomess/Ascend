@@ -858,75 +858,124 @@
 }
 
 @media (max-width: 768px) {
+    /* 1. Envelopamento e Margens do Card Principal */
     .dashboard-command-hero {
         height: auto !important;
         min-height: auto !important;
-        border-radius: 28px;
-        margin-bottom: 30px;
+        border-radius: 28px !important;
+        margin-bottom: 30px !important;
+        margin-left: 8px !important;
+        margin-right: 8px !important;
+        border: 1px solid rgba(226, 201, 133, 0.16) !important;
+        box-shadow: 0 16px 45px rgba(0, 0, 0, 0.4) !important;
     }
     
     .dashboard-command-inner {
         height: auto !important;
         min-height: auto !important;
-        padding: 24px 24px 44px 24px !important;
+        padding: 24px !important;
+    }
+
+    /* Alinhamento das tags superiores */
+    .dashboard-command-inner .d-flex.flex-wrap.gap-2 {
+        gap: 12px !important;
     }
     
+    /* 3. Ajuste de Tipografia, Destaque do Nome e Respiro do Texto */
     .dashboard-hero-title {
-        font-size: 2.8rem !important;
-        margin-bottom: 12px;
+        font-size: 3.2rem !important;
+        font-weight: 800 !important;
+        line-height: 1.1 !important;
+        margin-top: 10px !important;
+        margin-bottom: 12px !important;
     }
-    
+
+    .dashboard-command-inner p.text-muted {
+        line-height: 1.65 !important;
+        font-size: 0.95rem !important;
+        margin-bottom: 24px !important;
+    }
+
     .dashboard-identity {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 24px;
-        margin-top: 24px;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 20px !important;
+        margin-top: 20px !important;
+    }
+
+    /* 2. Sub-cards independentes com fundos translúcidos e bordas finas */
+    .dashboard-rank-progress {
+        background: rgba(255, 250, 240, 0.02) !important;
+        border: 1px solid rgba(226, 201, 133, 0.1) !important;
+        border-radius: 18px !important;
+        padding: 16px !important;
+        margin-bottom: 8px !important;
+        width: 100% !important;
+        max-width: none !important;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15) !important;
     }
     
     .dashboard-class-card {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 14px;
-        padding: 16px;
-        border-radius: 18px;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 14px !important;
+        padding: 18px !important;
+        border-radius: 18px !important;
+        background: rgba(255, 250, 240, 0.02) !important;
+        border: 1px solid rgba(226, 201, 133, 0.1) !important;
+        margin-bottom: 20px !important;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15) !important;
     }
     
     .dashboard-class-icon {
-        width: 48px;
-        height: 48px;
-        border-radius: 14px;
-        font-size: 1.2rem;
+        width: 48px !important;
+        height: 48px !important;
+        border-radius: 14px !important;
+        font-size: 1.2rem !important;
     }
     
+    /* 4. Organização das Estatísticas Inferiores em Duas Colunas */
     .dashboard-insight-grid {
-        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)) !important;
-        gap: 10px;
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 12px !important;
+        width: 100% !important;
     }
     
     .dashboard-insight-pill {
-        padding: 12px 14px;
+        background: rgba(255, 250, 240, 0.02) !important;
+        border: 1px solid rgba(226, 201, 133, 0.1) !important;
+        border-radius: 16px !important;
+        padding: 14px !important;
+        text-align: center !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        margin: 0 !important;
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1) !important;
     }
     
     .dashboard-insight-pill strong {
-        font-size: 1.15rem;
+        font-size: 1.2rem !important;
+        margin-bottom: 4px !important;
     }
     
     .dashboard-evolution {
         text-align: left !important;
-        margin-top: 10px;
+        margin-top: 10px !important;
     }
     
     .dashboard-evolution-number {
         font-size: 3.5rem !important;
     }
     
-    /* Rolagem horizontal para o Heatmap em telas pequenas de celular */
     .dashboard-heatmap-card {
-        overflow-x: auto;
+        overflow-x: auto !important;
     }
     
     .heatmap-grid {
-        min-width: 320px;
+        min-width: 320px !important;
     }
 }
 

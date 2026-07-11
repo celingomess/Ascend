@@ -1,10 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 
-const databaseUrl = process.env.DATABASE_URL;
-if (!databaseUrl) {
-  throw new Error("DATABASE_URL environment variable is missing.");
-}
+const databaseUrl = process.env.DATABASE_URL || "mysql://localhost:3306/Ascend";
 
 const adapter = new PrismaMariaDb(databaseUrl);
 

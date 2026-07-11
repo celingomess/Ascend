@@ -1,16 +1,15 @@
 import React from "react";
+import prisma from "@/lib/prisma";
+import MetasClientInitial from "@/components/MetasClientInitial";
 
-export default function MetasPlaceholderPage() {
-  return (
-    <div className="container py-5 text-center">
-      <span className="badge-old mb-3">
-        <i className="bi bi-clock-history"></i> Em Migração
-      </span>
-      <h2 className="ascend-title mb-3" style={{ fontSize: "1.8rem" }}>Jornadas</h2>
-      <p className="text-muted mx-auto" style={{ maxWidth: "480px" }}>
-        Estamos migrando a stack original do Flask para Next.js + TypeScript + MySQL. Este módulo estará disponível em breve!
-      </p>
-      <a href="/dashboard" className="btn btn-ascend mt-3">Voltar ao Início</a>
-    </div>
-  );
+export const revalidate = 0; // Garantir dados em tempo real
+
+export default async function MetasPage() {
+  // Buscar todas as jornadas do usuário padrão (user_id = 1)
+  const metas = await prisma.goals.findMany({
+    where: { user_id: 1 },
+    orderBy: { data_criacao: "desc" },
+  });
+
+  return <MetasClientInitial initialMetas={metas} />;
 }

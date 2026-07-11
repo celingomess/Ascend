@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import confetti from "canvas-confetti";
+import { useLevelUp } from "./LevelUpContext";
 
 import "@/styles/health.css";
 
@@ -68,6 +69,8 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
   const [nutrition, setNutrition] = useState<Nutrition>(initialNutrition);
   const [agua, setAgua] = useState<number>(initialNutrition.agua_ml || 0);
   const [workoutsList, setWorkoutsList] = useState<Workout[]>(workouts);
+
+  const { triggerLevelUp } = useLevelUp();
 
   // Dia ativo selecionado na agenda semanal (padrão = hoje)
   const currentDayIndex = new Date().getDay();
@@ -266,17 +269,20 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
       const data = await res.json();
 
       if (data.success) {
-        if (typeof window !== "undefined" && (window as any).AscendSFX) {
-          (window as any).AscendSFX.playSuccess();
+        if (data.nivel_subiu) {
+          triggerLevelUp(data.usuario_nivel - 1, data.usuario_nivel);
+        } else {
+          if (typeof window !== "undefined" && (window as any).AscendSFX) {
+            (window as any).AscendSFX.playSuccess();
+          }
+          confetti({
+            particleCount: 150,
+            spread: 80,
+            origin: { y: 0.6 },
+          });
+          alert(`${data.mensagem} (+${data.xp_ganho} XP!)`);
+          window.location.reload();
         }
-        confetti({
-          particleCount: 150,
-          spread: 80,
-          origin: { y: 0.6 },
-        });
-
-        alert(`${data.mensagem} (+${data.xp_ganho} XP!)`);
-        window.location.reload();
       } else {
         alert("Erro ao concluir treino: " + data.message);
       }

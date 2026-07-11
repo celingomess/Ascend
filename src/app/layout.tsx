@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import prisma from "@/lib/prisma";
 import Sidebar from "@/components/Sidebar";
 import MobileBottomNav from "@/components/MobileBottomNav";
+import { LevelUpProvider } from "@/components/LevelUpContext";
 
 // Importar estilos globais
 import "../styles/style.css";
@@ -57,13 +58,15 @@ export default async function RootLayout({
         <script src="/scripts/sfx.js" defer />
       </head>
       <body>
-        <div className="ascend-app-shell">
-          <Sidebar user={userData} />
+        <LevelUpProvider>
+          <div className="ascend-app-shell">
+            <Sidebar user={userData} />
 
-          <main className="ascend-app-main">{children}</main>
+            <main className="ascend-app-main">{children}</main>
 
-          <MobileBottomNav />
-        </div>
+            <MobileBottomNav />
+          </div>
+        </LevelUpProvider>
 
         {/* Bootstrap Bundle JS */}
         <script

@@ -1351,4 +1351,31 @@ select.form-select,
     .table-responsive .table {
         min-width: 480px !important;
     }
+}
+
+/* Touch Targets - Área mínima de clique de 48px para elementos interativos no mobile */
+@media (max-width: 768px) {
+    .btn,
+    .btn-xs,
+    .btn-sm,
+    .btn-icon,
+    .btn-action,
+    .action-btn,
+    .saude-log-btn,
+    .water-btn,
+    .edit-btn,
+    .delete-btn {
+        min-width: 48px !important;
+        min-height: 48px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+
+    /* Aumentar inputs de quantidade de musculação/nutrição para clique fácil */
+    .table input[type="number"],
+    .table-responsive input {
+        min-height: 48px !important;
+        font-size: 0.95rem !important;
+    }
 }

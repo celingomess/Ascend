@@ -1378,4 +1378,15 @@ select.form-select,
         min-height: 48px !important;
         font-size: 0.95rem !important;
     }
+}
+
+/* Forçar visibilidade e contraste de labels e textos muted contra fundos escuros (Evita override do Bootstrap) */
+html body .text-muted,
+html body small.text-muted,
+html body span.text-muted,
+html body p.text-muted,
+html body div.text-muted,
+html body label.form-label,
+html body label {
+    color: var(--cream-soft) !important; /* d9cbb2 */
 }

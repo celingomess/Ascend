@@ -1073,16 +1073,16 @@
     color: #ff4500 !important;
     text-shadow: 0 0 10px rgba(255, 69, 0, 0.8);
     animation: firePulse 1.5s infinite alternate;
+    display: inline-block;
+    will-change: transform;
 }
 
 @keyframes firePulse {
     0% {
         transform: scale(1);
-        filter: drop-shadow(0 0 2px rgba(255, 69, 0, 0.5));
     }
     100% {
-        transform: scale(1.15);
-        filter: drop-shadow(0 0 8px rgba(255, 69, 0, 0.9));
+        transform: scale(1.2);
     }
 }
 

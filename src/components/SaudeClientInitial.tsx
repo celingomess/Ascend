@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import confetti from "canvas-confetti";
 import { useLevelUp } from "./LevelUpContext";
+import Chart from "chart.js/auto";
 
 import "@/styles/health.css";
 
@@ -43,6 +44,7 @@ interface SaudeClientInitialProps {
     nome: string;
     nivel: number;
     xp_total: number;
+    peso?: number | null;
   };
   initialNutrition: Nutrition;
   workouts: Workout[];
@@ -71,6 +73,152 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
   const [workoutsList, setWorkoutsList] = useState<Workout[]>(workouts);
 
   const { triggerLevelUp } = useLevelUp();
+
+  const [peso, setPeso] = useState<number | null>(user.peso || null);
+  const waterGoal = peso ? Math.round(peso * 35) : 2000;
+
+  // Estados do Gráfico de Cargas
+  const [historyModalExercise, setHistoryModalExercise] = useState<Exercise | null>(null);
+  const chartCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const historyChartRef = useRef<Chart | null>(null);
+
+  // Solicitar permissão de Notificação e configurar lembrete de PWA
+  useEffect(() => {
+    if (typeof window !== "undefined" && "Notification" in window) {
+      if (Notification.permission === "default") {
+        Notification.requestPermission();
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && "Notification" in window) {
+      const interval = setInterval(() => {
+        if (Notification.permission === "granted") {
+          new Notification("💧 Hora de se Hidratar! - Ascend", {
+            body: `Mantenha seu foco! Lembre-se de beber um copo d'água. Sua meta é de ${waterGoal}ml hoje.`,
+            icon: "/icons/icon-192x192.png"
+          });
+        }
+      }, 1000 * 60 * 60 * 2); // A cada 2 horas
+      return () => clearInterval(interval);
+    }
+  }, [waterGoal]);
+
+  // Efeito para desenhar o gráfico de evolução de cargas
+  useEffect(() => {
+    if (!historyModalExercise || !chartCanvasRef.current) return;
+
+    let active = true;
+
+    const fetchHistory = async () => {
+      try {
+        const res = await fetch(`/saude/exercicio/${historyModalExercise.id}/historico`);
+        const data = await res.json();
+        if (data.success && active) {
+          const ctx = chartCanvasRef.current?.getContext("2d");
+          if (!ctx) return;
+
+          if (historyChartRef.current) {
+            historyChartRef.current.destroy();
+          }
+
+          const logs = data.history || [];
+          const labels = logs.map((h: any) => h.data);
+          const values = logs.map((h: any) => h.carga);
+
+          historyChartRef.current = new Chart(ctx, {
+            type: "line",
+            data: {
+              labels: labels.length > 0 ? labels : ["Sem dados"],
+              datasets: [
+                {
+                  label: "Carga (kg)",
+                  data: values.length > 0 ? values : [historyModalExercise.carga_atual || 0],
+                  borderColor: "#c7a35a",
+                  backgroundColor: "rgba(199, 163, 90, 0.1)",
+                  borderWidth: 2,
+                  tension: 0.3,
+                  fill: true,
+                  pointBackgroundColor: "#c7a35a",
+                  pointRadius: 4,
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: {
+                  display: false,
+                },
+              },
+              scales: {
+                y: {
+                  grid: {
+                    color: "rgba(255,255,255,0.05)",
+                  },
+                  ticks: {
+                    color: "#d9cbb2",
+                  },
+                },
+                x: {
+                  grid: {
+                    color: "rgba(255,255,255,0.05)",
+                  },
+                  ticks: {
+                    color: "#d9cbb2",
+                  },
+                },
+              },
+            },
+          });
+        }
+      } catch (err) {
+        console.error("Erro ao carregar histórico: ", err);
+      }
+    };
+
+    fetchHistory();
+
+    return () => {
+      active = false;
+      if (historyChartRef.current) {
+        historyChartRef.current.destroy();
+        historyChartRef.current = null;
+      }
+    };
+  }, [historyModalExercise]);
+
+  const handleUpdateWeight = async (newPeso: number) => {
+    const formData = new FormData();
+    formData.append("peso", newPeso.toString());
+
+    try {
+      const res = await fetch("/saude/peso/atualizar", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPeso(newPeso);
+        if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+          new Notification("💧 Nova Meta Hidratação!", {
+            body: `Seu peso foi atualizado para ${newPeso}kg. Sua nova meta é de ${Math.round(newPeso * 35)}ml d'água por dia.`,
+            icon: "/icons/icon-192x192.png"
+          });
+        }
+      } else {
+        alert("Erro ao atualizar peso: " + data.message);
+      }
+    } catch (err: any) {
+      alert("Erro de conexão: " + err.message);
+    }
+  };
+
+  const openHistoryChart = (exercise: Exercise) => {
+    setHistoryModalExercise(exercise);
+  };
 
   // Dia ativo selecionado na agenda semanal (padrão = hoje)
   const currentDayIndex = new Date().getDay();
@@ -679,7 +827,7 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
               className="hydration-container p-3 rounded"
               style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(226,201,133,0.1)" }}
             >
-              <div className="d-flex justify-content-between align-items-center mb-3">
+              <div className="d-flex justify-content-between align-items-center mb-2">
                 <div>
                   <span
                     className="d-block text-muted small"
@@ -688,27 +836,63 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
                     CONTROLE DE ÁGUA
                   </span>
                   <strong className="fs-4 blue-text">
-                    <span id="lbl-agua">{agua}</span> ml
+                    <span id="lbl-agua">{agua}</span> <span className="text-muted fs-6">/ {waterGoal} ml</span>
                   </strong>
                 </div>
-                <span className="bi bi-droplet-fill fs-3 blue-text animate-pulse" />
+                <div className="d-flex align-items-center gap-2">
+                  <button
+                    type="button"
+                    className="btn btn-link text-muted p-0"
+                    title="Configurar Peso"
+                    onClick={() => {
+                      const newPeso = prompt("Digite seu peso atual em kg (ex: 75.5):", peso?.toString() || "");
+                      if (newPeso) {
+                        const parsed = parseFloat(newPeso);
+                        if (!isNaN(parsed) && parsed > 0) {
+                          handleUpdateWeight(parsed);
+                        }
+                      }
+                    }}
+                    style={{ minWidth: "24px", minHeight: "24px" }}
+                  >
+                    <i className="bi bi-gear" />
+                  </button>
+                  <span className="bi bi-droplet-fill fs-3 blue-text animate-pulse" />
+                </div>
               </div>
+
+              {/* Progresso visual da água */}
+              <div className="progress mb-3" style={{ height: "6px", background: "rgba(255,255,255,0.05)" }}>
+                <div
+                  className="progress-bar bg-info"
+                  role="progressbar"
+                  style={{ width: `${Math.min((agua / waterGoal) * 100, 100)}%`, transition: "width 0.5s ease" }}
+                />
+              </div>
+
               <div className="d-flex gap-2">
                 <button
                   type="button"
                   className="btn btn-sm btn-ascend-outline flex-grow-1"
                   onClick={() => handleAddWater(200)}
                 >
-                  +200ml +
+                  +200ml
                 </button>
                 <button
                   type="button"
                   className="btn btn-sm btn-ascend-outline flex-grow-1"
                   onClick={() => handleAddWater(500)}
                 >
-                  +500ml +
+                  +500ml
                 </button>
               </div>
+
+              {peso && (
+                <div className="text-center mt-2" style={{ fontSize: "0.65rem" }}>
+                  <span className="text-muted">Meta por peso: </span>
+                  <span className="gold-text fw-bold">{peso} kg ({peso} x 35ml)</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -875,7 +1059,18 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
                                           key={ex.id}
                                         >
                                           <td>
-                                            <strong className="d-block text-white">{ex.nome_exercicio}</strong>
+                                            <div className="d-flex align-items-center gap-2">
+                                              <strong className="text-white">{ex.nome_exercicio}</strong>
+                                              <button
+                                                type="button"
+                                                className="btn btn-link text-muted p-0"
+                                                title="Histórico de Carga"
+                                                style={{ minWidth: "24px", minHeight: "24px", display: "inline-flex", alignItems: "center" }}
+                                                onClick={() => openHistoryChart(ex)}
+                                              >
+                                                <i className="bi bi-graph-up gold-text" style={{ fontSize: "0.85rem" }} />
+                                              </button>
+                                            </div>
                                           </td>
                                           <td>{ex.series}</td>
                                           <td>{ex.repeticoes}</td>
@@ -1248,6 +1443,42 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
                           required
                         />
                       </div>
+                      
+                      {/* Preview em tempo real da importação */}
+                      {batchText.trim() && (
+                        <div className="mb-3 p-3 rounded text-start" style={{ background: "rgba(226,201,133,0.02)", border: "1px dashed rgba(226,201,133,0.2)" }}>
+                          <span className="d-block text-muted small mb-2 fw-bold" style={{ fontSize: "0.7rem", letterSpacing: "1px" }}>
+                            🔍 PREVIEW EM TEMPO REAL DA IMPORTAÇÃO EM LOTE
+                          </span>
+                          <div className="table-responsive" style={{ maxHeight: "180px", overflowY: "auto" }}>
+                            <table className="table table-sm table-dark table-borderless mb-0 align-middle" style={{ fontSize: "0.78rem" }}>
+                              <thead>
+                                <tr className="border-bottom border-secondary text-muted">
+                                  <th>Exercício</th>
+                                  <th className="text-center">Séries</th>
+                                  <th className="text-center">Repetições</th>
+                                  <th className="text-end">Carga</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {batchText.split("\n").map((line, idx) => {
+                                  const parsed = parseExerciseLine(line);
+                                  if (!parsed || !parsed.nome_exercicio) return null;
+                                  return (
+                                    <tr key={idx} className="border-bottom border-dark" style={{ borderBottomColor: "rgba(255,255,255,0.02) !important" }}>
+                                      <td className="text-white fw-bold py-2">{parsed.nome_exercicio}</td>
+                                      <td className="text-center text-muted py-2">{parsed.series}</td>
+                                      <td className="text-center text-muted py-2">{parsed.repeticoes}</td>
+                                      <td className="text-end text-success fw-bold py-2">{parsed.carga_atual} kg</td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
+                      
                       <small className="text-muted d-block" style={{ fontSize: "0.78rem" }}>
                         <i className="bi bi-magic gold-text"></i> O sistema detectará automaticamente: o nome do exercício, número de séries, repetições (ex: 8-12 ou 10) e a carga de peso!
                       </small>
@@ -1274,6 +1505,45 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
           </div>
         );
       })()}
+
+      {/* Modal de Histórico de Cargas (Progressive Overload) */}
+      {historyModalExercise && (
+        <div className="modal fade show d-block" tabIndex={-1} style={{ background: "rgba(0,0,0,0.8)", backdropFilter: "blur(4px)", zIndex: 1050 }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content text-white border border-secondary" style={{ background: "#111" }}>
+              <div className="modal-header border-bottom border-secondary px-4">
+                <h5 className="modal-title gold-text">
+                  <i className="bi bi-graph-up me-2" />
+                  Histórico de Carga: {historyModalExercise.nome_exercicio}
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close btn-close-white"
+                  onClick={() => setHistoryModalExercise(null)}
+                  aria-label="Fechar"
+                />
+              </div>
+              <div className="modal-body p-4">
+                <div style={{ height: "250px", position: "relative" }}>
+                  <canvas ref={chartCanvasRef} />
+                </div>
+                <div className="text-center mt-3 text-muted small">
+                  Histórico das últimas 10 alterações de carga registradas para este exercício.
+                </div>
+              </div>
+              <div className="modal-footer border-0 px-4 pb-4">
+                <button
+                  type="button"
+                  className="btn btn-sm btn-ascend-outline w-100"
+                  onClick={() => setHistoryModalExercise(null)}
+                >
+                  Fechar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

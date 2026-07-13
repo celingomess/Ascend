@@ -173,6 +173,7 @@ model users {
   streak_atual     Int?
   melhor_streak    Int?
   ultima_atividade DateTime? @db.Date
+  peso             Float?    @db.Float
 }
 
 model workout_exercises {
@@ -206,4 +207,16 @@ model workouts {
   criado_em   DateTime? @db.DateTime(0)
 
   @@index([user_id], map: "user_id")
+}
+
+model workout_exercise_history {
+  id             Int      @id @default(autoincrement())
+  exercise_name  String   @db.VarChar(200)
+  workout_id     Int
+  user_id        Int
+  carga          Float    @db.Float
+  data_registro  DateTime @db.Date
+  
+  @@index([user_id], map: "user_id")
+  @@index([workout_id], map: "workout_id")
 }

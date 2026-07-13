@@ -33,6 +33,16 @@ export function calcularTituloAscend(xp: number): string {
   return titulo;
 }
 
+export function obterClasseCorRank(xp: number): string {
+  const titulo = calcularTituloAscend(xp);
+  if (titulo.startsWith("Visionário")) return "rank-diamante";
+  if (titulo.startsWith("Estrategista")) return "rank-platina";
+  if (titulo.startsWith("Arquiteto")) return "rank-platina";
+  if (titulo.startsWith("Executor")) return "rank-ouro";
+  if (titulo.startsWith("Persistente")) return "rank-prata";
+  return "rank-bronze";
+}
+
 export function calcularAvatarFrame(xp: number): string {
   const titulo = calcularTituloAscend(xp);
   if (titulo.startsWith("Visionário")) return "frame-visionario";

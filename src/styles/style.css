@@ -1389,4 +1389,32 @@ html body div.text-muted,
 html body label.form-label,
 html body label {
     color: var(--cream-soft) !important; /* d9cbb2 */
+}
+
+/* Transições e Ofensivas de Gamificação Premium Globais */
+.fade-in-up {
+    animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(16px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Níveis de Ascensão Ranks Glows */
+.rank-bronze { color: #cd7f32 !important; text-shadow: 0 0 8px rgba(205, 127, 50, 0.4); }
+.rank-prata { color: #c0c0c0 !important; text-shadow: 0 0 8px rgba(192, 192, 192, 0.4); }
+.rank-ouro { color: #ffd700 !important; text-shadow: 0 0 12px rgba(255, 215, 0, 0.5); }
+.rank-platina { color: #e5e4e2 !important; text-shadow: 0 0 12px rgba(229, 228, 226, 0.5); }
+.rank-diamante { color: #b9f2ff !important; text-shadow: 0 0 16px rgba(185, 242, 255, 0.6); }
+
+/* Suavização da Sidebar Adaptativa (Transition) */
+.ascend-sidebar {
+    transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }

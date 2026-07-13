@@ -284,7 +284,7 @@ export const FinancasClientInitial: React.FC<FinancasClientInitialProps> = ({
       </div>
 
       {/* Indicadores no Topo */}
-      <div className="row g-3 mb-4">
+      <div className="row g-3 mb-4 fade-in-up">
         {/* Saldo */}
         <div className="col-md-4">
           <div className="ascend-card p-4 text-center d-flex flex-column justify-content-center h-100">
@@ -335,7 +335,7 @@ export const FinancasClientInitial: React.FC<FinancasClientInitialProps> = ({
       </div>
 
       {/* Layout Dividido */}
-      <div className="row g-4">
+      <div className="row g-4 fade-in-up">
         {/* Formulários & Gráfico (Esquerda) */}
         <div className="col-lg-5 col-md-12">
           <div className="ascend-card p-4 mb-4">

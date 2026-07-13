@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { updateUserStreak } from "@/lib/streaks";
 
 export async function POST(
   req: NextRequest,
@@ -53,12 +54,13 @@ export async function POST(
       nivelSubiu = true;
     }
 
+    await updateUserStreak(1, prisma);
+
     await prisma.users.update({
       where: { id: 1 },
       data: {
         xp_total: novoXp,
         nivel: novoNivel,
-        ultima_atividade: new Date(),
       },
     });
 

@@ -2,6 +2,7 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { updateUserStreak } from "@/lib/streaks";
 
 // Função de parsing do comando de log rápido
 function parseQuickLog(text: string) {
@@ -167,12 +168,13 @@ export async function addTransactionAction(formData: FormData) {
       nivelSubiu = true;
     }
 
+    await updateUserStreak(1, prisma);
+
     await prisma.users.update({
       where: { id: 1 },
       data: {
         xp_total: novoXp,
         nivel: novoNivel,
-        ultima_atividade: new Date(),
       },
     });
 

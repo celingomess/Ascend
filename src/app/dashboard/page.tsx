@@ -7,6 +7,7 @@ import {
   calcularClasseEvolucao,
   obterProgressaoTitulos,
   gerarHeatmapConsistencia,
+  obterClasseCorRank,
 } from "@/lib/utils";
 
 import "@/styles/dashboard.css";
@@ -161,7 +162,7 @@ export default async function DashboardPage() {
   return (
     <div className="container-fluid py-4">
       {/* Welcome Hero Card */}
-      <section className="dashboard-command-hero mb-5">
+      <section className="dashboard-command-hero mb-5 fade-in-up">
         <div className="dashboard-command-inner">
           <div className="d-flex justify-content-between align-items-start flex-wrap gap-3">
             <div className="d-flex flex-wrap gap-2">
@@ -186,7 +187,7 @@ export default async function DashboardPage() {
             <div className="dashboard-identity">
               <div>
                 <div className="dashboard-rank mb-2">
-                  <span className="rank-label">{rankAtual}</span>
+                  <span className={`rank-label ${obterClasseCorRank(user.xp_total ?? 0)}`}>{rankAtual}</span>
                   <span className="rank-divider"></span>
                   <span className="rank-level">Nível {user.nivel}</span>
                 </div>
@@ -278,7 +279,7 @@ export default async function DashboardPage() {
       {/* Grid Layout Principal */}
       <div className="dashboard-split-layout">
         {/* Coluna Esquerda: Hub e Foco */}
-        <div className="dashboard-col-left">
+        <div className="dashboard-col-left fade-in-up">
           {/* Hub de Sistemas de Suporte */}
           <section className="dashboard-hub-section mb-4">
             <div className="dashboard-section-header">
@@ -418,7 +419,7 @@ export default async function DashboardPage() {
         </div>
 
         {/* Coluna Direita: Heatmap e Atividades */}
-        <div className="dashboard-col-right">
+        <div className="dashboard-col-right fade-in-up">
           {/* Ritmo de evolução */}
           <div className="ascend-card p-4 performance-card mb-4">
             <span className="badge-old mb-3">
@@ -436,9 +437,9 @@ export default async function DashboardPage() {
                 <strong className="domain-value d-block mt-2">{metasFrias}</strong>
                 <small className="text-muted">Precisam de atenção</small>
               </div>
-              <div className="life-domain-card h-100">
+              <div className={`life-domain-card h-100 ${(user.streak_atual ?? 0) > 0 ? "streak-active-card" : ""}`}>
                 <span className="domain-label">
-                  <i className="bi bi-fire streak-icon"></i> Streak Global
+                  <i className={`bi bi-fire streak-icon ${(user.streak_atual ?? 0) > 0 ? "streak-fire-glow" : ""}`}></i> Streak Global
                 </span>
                 <strong className="domain-value d-block mt-2">{user.streak_atual ?? 0}</strong>
                 <small className="text-muted">Dias seguidos</small>

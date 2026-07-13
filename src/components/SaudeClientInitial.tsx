@@ -631,7 +631,7 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
       </div>
 
       {/* Layout Dividido */}
-      <div className="row g-4">
+      <div className="row g-4 fade-in-up">
         {/* Painel de Nutrição & Hidratação (Esquerda) */}
         <div className="col-lg-5 col-md-12">
           <div className="ascend-card p-4 h-100">

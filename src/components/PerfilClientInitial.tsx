@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/navigation";
+import { obterClasseCorRank } from "@/lib/utils";
 import "@/styles/perfil.css";
 
 interface User {
@@ -158,7 +159,7 @@ export default function PerfilClientInitial({
 
               <h2 className="profile-user-name mb-1" style={{ fontSize: "1.3rem" }}>{usuario.nome}</h2>
               <div className="profile-user-email text-muted small mb-2">{usuario.email}</div>
-              <div className="profile-rank mb-2" style={{ color: "var(--gold-soft)", fontWeight: 600 }}>{rankAtual}</div>
+              <div className={`profile-rank mb-2 ${obterClasseCorRank(usuario.xp_total ?? 0)}`} style={{ fontWeight: 600 }}>{rankAtual}</div>
               <div className="text-muted small">
                 Nível {usuario.nivel} &middot; {usuario.xp_total} XP
               </div>

@@ -61,9 +61,19 @@ export default function EvolucaoClient({
 }: EvolucaoClientProps) {
   const [reports, setReports] = useState<AIReport[]>(initialReports);
   const [activeTab, setActiveTab] = useState<"graficos" | "IA">("graficos");
-  const [reportType, setReportType] = useState<"SEMANAL" | "MENSAL">("SEMANAL");
+  const [reportType, setReportType] = useState<"SEMANAL" | "MENSAL" | "TREINO">("SEMANAL");
   const [loading, setLoading] = useState(false);
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
+
+  // State para o ponto do gráfico atualmente sob hover
+  const [hoveredPoint, setHoveredPoint] = useState<{
+    x: number;
+    yPeso: number;
+    yCarga: number;
+    label: string;
+    peso: number;
+    volumeCarga: number;
+  } | null>(null);
 
   // 1. Processar dados para o Gráfico de Linha de Duplo Eixo (últimos 30 dias)
   const chartData = useMemo(() => {
@@ -96,7 +106,7 @@ export default function EvolucaoClient({
     return dataPoints;
   }, [initialWeights, initialLoadHistory, currentWeight]);
 
-  // Coordenadas SVG
+  // Coordenadas SVG e Normalizações
   const svgPaths = useMemo(() => {
     const width = 600;
     const height = 250;
@@ -135,7 +145,23 @@ export default function EvolucaoClient({
       }
     });
 
-    return { pesoPoints, cargaPoints, minPeso, maxPeso, minCarga, maxCarga, getX, getY };
+    // Construção das áreas fechadas para efeito de gradiente de preenchimento
+    let pesoFillPoints = "";
+    let cargaFillPoints = "";
+
+    if (chartData.length > 0) {
+      const x0 = getX(0);
+      const xN = getX(chartData.length - 1);
+      const baseY = chartHeight + padding;
+
+      const firstY = getY(chartData[0].peso, minPeso, maxPeso);
+      pesoFillPoints = `M ${x0} ${baseY} L ${x0} ${firstY} ${pesoPoints.substring(pesoPoints.indexOf(" L"))} L ${xN} ${baseY} Z`;
+
+      const firstCargaY = getY(chartData[0].volumeCarga, minCarga, maxCarga);
+      cargaFillPoints = `M ${x0} ${baseY} L ${x0} ${firstCargaY} ${cargaPoints.substring(cargaPoints.indexOf(" L"))} L ${xN} ${baseY} Z`;
+    }
+
+    return { pesoPoints, cargaPoints, pesoFillPoints, cargaFillPoints, minPeso, maxPeso, minCarga, maxCarga, getX, getY, chartWidth, chartHeight, padding };
   }, [chartData, currentWeight]);
 
   // 2. Processar dados para o Mapa de Calor (últimos 180 dias)
@@ -183,7 +209,6 @@ export default function EvolucaoClient({
     const res = await generateHealthReportAction(reportType);
     setLoading(false);
     if (res.success) {
-      // Recarregar a página para obter o relatório novo
       window.location.reload();
     } else {
       setStatusMsg("Erro: " + res.message);
@@ -296,7 +321,7 @@ export default function EvolucaoClient({
 
           {/* Gráfico Duplo Eixo */}
           <div className="col-12">
-            <div className="card border border-secondary text-white p-4 rounded-4 shadow-lg" style={{ background: "rgba(10,18,12,0.85)", backdropFilter: "blur(8px)" }}>
+            <div className="card border border-secondary text-white p-4 rounded-4 shadow-lg position-relative" style={{ background: "rgba(10,18,12,0.85)", backdropFilter: "blur(8px)" }}>
               <div className="d-flex align-items-center gap-2 mb-3">
                 <TrendingUp className="text-warning" size={20} />
                 <h3 className="h5 mb-0 text-warning" style={{ fontFamily: "'Cormorant Garamond', serif" }}>
@@ -304,47 +329,107 @@ export default function EvolucaoClient({
                 </h3>
               </div>
               <p className="text-muted small mb-4">
-                Comparativo direto entre o peso corporal (linha cheia dourada) e a progressão de cargas nos treinos (linha pontilhada).
+                Passe o cursor sobre o gráfico para ver os dados detalhados de evolução diária.
               </p>
+
+              {/* Tooltip interativo */}
+              {hoveredPoint && (
+                <div
+                  className="position-absolute p-2.5 rounded-3 border border-secondary text-white shadow-lg pointer-events-none fade-in-up"
+                  style={{
+                    left: `${(hoveredPoint.x / 600) * 100}%`,
+                    top: "100px",
+                    transform: "translateX(-50%)",
+                    background: "rgba(7, 17, 12, 0.95)",
+                    backdropFilter: "blur(6px)",
+                    zIndex: 10,
+                    minWidth: "150px",
+                    borderLeft: "4px solid var(--gold)",
+                  }}
+                >
+                  <div className="small text-warning fw-bold mb-1">{hoveredPoint.label}</div>
+                  <div className="small d-flex justify-content-between">
+                    <span className="text-muted">Peso:</span>
+                    <strong className="text-white">{hoveredPoint.peso.toFixed(1)} kg</strong>
+                  </div>
+                  <div className="small d-flex justify-content-between">
+                    <span className="text-muted">Volume Carga:</span>
+                    <strong className="text-white">{hoveredPoint.volumeCarga.toFixed(0)} kg</strong>
+                  </div>
+                </div>
+              )}
 
               {/* Canvas SVG do Gráfico */}
               <div className="position-relative overflow-auto">
                 <svg viewBox="0 0 600 250" className="w-100 h-auto" style={{ minWidth: "500px" }}>
-                  {/* Grid Lines */}
-                  <line x1="40" y1="40" x2="560" y2="40" stroke="rgba(255,255,255,0.05)" />
-                  <line x1="40" y1="125" x2="560" y2="125" stroke="rgba(255,255,255,0.05)" />
-                  <line x1="40" y1="210" x2="560" y2="210" stroke="rgba(255,255,255,0.05)" />
+                  {/* Definições de Gradientes Premium */}
+                  <defs>
+                    <linearGradient id="pesoGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="var(--gold)" stopOpacity="0.18" />
+                      <stop offset="100%" stopColor="var(--gold)" stopOpacity="0.0" />
+                    </linearGradient>
+                    <linearGradient id="cargaGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#AA7C11" stopOpacity="0.12" />
+                      <stop offset="100%" stopColor="#AA7C11" stopOpacity="0.0" />
+                    </linearGradient>
+                  </defs>
 
-                  {/* Caminhos das linhas */}
+                  {/* Grid Lines Horizontais e Verticais */}
+                  <line x1="40" y1="40" x2="560" y2="40" stroke="rgba(255,255,255,0.06)" />
+                  <line x1="40" y1="125" x2="560" y2="125" stroke="rgba(255,255,255,0.06)" />
+                  <line x1="40" y1="210" x2="560" y2="210" stroke="rgba(255,255,255,0.06)" />
+
+                  {/* Preenchimentos em Gradiente de Área */}
+                  {svgPaths.pesoFillPoints && (
+                    <path d={svgPaths.pesoFillPoints} fill="url(#pesoGrad)" />
+                  )}
+                  {svgPaths.cargaFillPoints && (
+                    <path d={svgPaths.cargaFillPoints} fill="url(#cargaGrad)" />
+                  )}
+
+                  {/* Linha de Traçado do Peso */}
                   {svgPaths.pesoPoints && (
                     <path
                       d={svgPaths.pesoPoints}
                       fill="none"
                       stroke="var(--gold)"
-                      strokeWidth="3"
+                      strokeWidth="3.5"
                       strokeLinecap="round"
                       strokeLinejoin="round"
                     />
                   )}
+
+                  {/* Linha de Traçado de Carga */}
                   {svgPaths.cargaPoints && (
                     <path
                       d={svgPaths.cargaPoints}
                       fill="none"
                       stroke="rgba(212, 175, 55, 0.45)"
                       strokeWidth="2.5"
-                      strokeDasharray="5,5"
+                      strokeDasharray="4,4"
                       strokeLinecap="round"
                       strokeLinejoin="round"
                     />
                   )}
 
-                  {/* Pontos interativos */}
+                  {/* Linha guia vertical sob hover */}
+                  {hoveredPoint && (
+                    <line
+                      x1={hoveredPoint.x}
+                      y1="40"
+                      x2={hoveredPoint.x}
+                      y2="210"
+                      stroke="rgba(212, 175, 55, 0.3)"
+                      strokeWidth="1.5"
+                      strokeDasharray="3,3"
+                    />
+                  )}
+
+                  {/* Pontos fixos nos intervalos das curvas */}
                   {chartData.map((pt, i) => {
                     const x = svgPaths.getX(i);
                     const yPeso = svgPaths.getY(pt.peso, svgPaths.minPeso, svgPaths.maxPeso);
                     const yCarga = svgPaths.getY(pt.volumeCarga, svgPaths.minCarga, svgPaths.maxCarga);
-
-                    // Só exibe pontos em intervalos ou se houver cargas para não poluir
                     const showCargaNode = pt.volumeCarga > 0;
                     
                     return (
@@ -359,9 +444,60 @@ export default function EvolucaoClient({
                     );
                   })}
 
-                  {/* Legendas dos Eixos */}
+                  {/* Círculos interativos que acompanham o hover */}
+                  {hoveredPoint && (
+                    <g>
+                      <circle
+                        cx={hoveredPoint.x}
+                        cy={hoveredPoint.yPeso}
+                        r="6"
+                        fill="var(--gold)"
+                        stroke="#ffffff"
+                        strokeWidth="2"
+                      />
+                      <circle
+                        cx={hoveredPoint.x}
+                        cy={hoveredPoint.yCarga}
+                        r="6"
+                        fill="#AA7C11"
+                        stroke="#ffffff"
+                        strokeWidth="2"
+                      />
+                    </g>
+                  )}
+
+                  {/* Eixo e Legendas */}
                   <text x="15" y="30" fill="var(--gold-soft)" fontSize="10" textAnchor="middle">KG</text>
                   <text x="585" y="30" fill="rgba(212, 175, 55, 0.65)" fontSize="10" textAnchor="middle">Carga</text>
+
+                  {/* Fatias Invisíveis para Gatilho de Hover */}
+                  {chartData.map((pt, i) => {
+                    const x = svgPaths.getX(i);
+                    const yPeso = svgPaths.getY(pt.peso, svgPaths.minPeso, svgPaths.maxPeso);
+                    const yCarga = svgPaths.getY(pt.volumeCarga, svgPaths.minCarga, svgPaths.maxCarga);
+                    const sliceWidth = svgPaths.chartWidth / (chartData.length - 1);
+
+                    return (
+                      <rect
+                        key={i}
+                        x={x - sliceWidth / 2}
+                        y="40"
+                        width={sliceWidth}
+                        height="170"
+                        fill="transparent"
+                        style={{ cursor: "crosshair" }}
+                        onMouseEnter={() => setHoveredPoint({
+                          x,
+                          yPeso,
+                          yCarga,
+                          label: pt.label,
+                          peso: pt.peso,
+                          volumeCarga: pt.volumeCarga
+                        })}
+                        onMouseLeave={() => setHoveredPoint(null)}
+                      />
+                    );
+                  })}
                 </svg>
               </div>
 
@@ -393,7 +529,7 @@ export default function EvolucaoClient({
               </p>
 
               <div className="mb-3">
-                <label className="form-label text-muted small mb-1">Período de Análise</label>
+                <label className="form-label text-muted small mb-1">Período / Tipo de Análise</label>
                 <select
                   value={reportType}
                   onChange={(e) => setReportType(e.target.value as any)}
@@ -401,6 +537,7 @@ export default function EvolucaoClient({
                 >
                   <option value="SEMANAL">Últimos 7 Dias (Semanal)</option>
                   <option value="MENSAL">Últimos 30 Dias (Mensal)</option>
+                  <option value="TREINO">Relatório de Cargas & Musculação</option>
                 </select>
               </div>
 

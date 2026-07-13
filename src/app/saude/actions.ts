@@ -6,7 +6,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-export async function generateHealthReportAction(tipo: "SEMANAL" | "MENSAL") {
+export async function generateHealthReportAction(tipo: "SEMANAL" | "MENSAL" | "TREINO") {
   try {
     const session = await getServerSession(authOptions);
     if (!session || !session.user) {
@@ -16,7 +16,7 @@ export async function generateHealthReportAction(tipo: "SEMANAL" | "MENSAL") {
 
     // Calcular o intervalo de datas
     const hoje = new Date();
-    const diasAtras = tipo === "SEMANAL" ? 7 : 30;
+    const diasAtras = tipo === "SEMANAL" ? 7 : (tipo === "MENSAL" ? 30 : 60);
     const dataLimite = new Date();
     dataLimite.setDate(hoje.getDate() - diasAtras);
     dataLimite.setHours(0, 0, 0, 0);
@@ -46,6 +46,14 @@ export async function generateHealthReportAction(tipo: "SEMANAL" | "MENSAL") {
       orderBy: { dataRegistro: "desc" },
     });
 
+    // 4. Buscar histórico de cargas
+    const loadHistory = await prisma.workout_exercise_history.findMany({
+      where: {
+        user_id: userId,
+        data_registro: { gte: dataLimite },
+      },
+    });
+
     // Obter peso atual do usuário
     const userDb = await prisma.users.findUnique({
       where: { id: userId },
@@ -63,7 +71,34 @@ export async function generateHealthReportAction(tipo: "SEMANAL" | "MENSAL") {
         const ai = new GoogleGenerativeAI(apiKey);
         const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-        const prompt = `
+        const prompt = tipo === "TREINO" ? `
+Você é o Coach de Musculação com IA do Ascend OS. Analise o histórico de treinos e cargas do usuário nos últimos ${diasAtras} dias:
+- Peso atual: ${pesoAtual} kg
+- Histórico de peso registrado: ${JSON.stringify(logsWeights)}
+- Treinos concluídos: ${JSON.stringify(logsWorkouts)}
+- Cargas progressivas registradas nos exercícios: ${JSON.stringify(loadHistory)}
+
+Gere um relatório focado em desempenho, musculação e progressão de força em Markdown.
+O relatório deve conter:
+1. Uma análise de consistência e frequência de treinos concluídos.
+2. Análise da curva de progressão de carga (Progressive Overload) com base nos registros fornecidos.
+3. Recomendações práticas específicas de periodização, aumento de cargas nos exercícios e ajustes de volume de treino (séries e repetições).
+
+Além do relatório em Markdown, forneça um objeto JSON com três chaves:
+"pontosFortes" (array de strings), "melhorias" (array de strings) e "previsaoTdee" (número de calorias estimado).
+
+Retorne os dois formatos estruturados exatamente como:
+---JSON_START---
+{
+  "pontosFortes": [...],
+  "melhorias": [...],
+  "previsaoTdee": 2500
+}
+---JSON_END---
+---MARKDOWN_START---
+[Seu Relatório em Markdown Aqui]
+---MARKDOWN_END---
+        `.trim() : `
 Você é o Personal Coach com IA do Ascend OS. Analise o seguinte histórico físico e nutricional do usuário nos últimos ${diasAtras} dias:
 - Peso atual: ${pesoAtual} kg
 - Histórico de peso registrado: ${JSON.stringify(logsWeights)}
@@ -76,7 +111,7 @@ O relatório deve conter:
 2. Uma previsão de evolução do peso corporal baseada no balanço calórico.
 3. Estimativa do TDEE dinâmico.
 
-Além do relatório em Markdown, você deve fornecer um objeto JSON com três chaves:
+Além do relatório em Markdown, forneça um objeto JSON com três chaves:
 "pontosFortes" (array de strings), "melhorias" (array de strings) e "previsaoTdee" (número).
 
 Retorne os dois formatos estruturados exatamente como:
@@ -95,7 +130,6 @@ Retorne os dois formatos estruturados exatamente como:
         const result = await model.generateContent(prompt);
         const text = result.response.text();
 
-        // Extrair o JSON e o Markdown usando marcadores
         const jsonMatch = text.match(/---JSON_START---([\s\S]*?)---JSON_END---/);
         const mdMatch = text.match(/---MARKDOWN_START---([\s\S]*?)---MARKDOWN_END---/);
 
@@ -107,10 +141,10 @@ Retorne os dois formatos estruturados exatamente como:
         }
       } catch (error) {
         console.error("Erro na API do Gemini, bailing para o fallback:", error);
-        ({ conteudo, insightsObj } = runHeuristicFallback(logsNutrition, logsWorkouts, logsWeights, pesoAtual, diasAtras));
+        ({ conteudo, insightsObj } = runHeuristicFallback(logsNutrition, logsWorkouts, logsWeights, loadHistory, pesoAtual, diasAtras, tipo));
       }
     } else {
-      ({ conteudo, insightsObj } = runHeuristicFallback(logsNutrition, logsWorkouts, logsWeights, pesoAtual, diasAtras));
+      ({ conteudo, insightsObj } = runHeuristicFallback(logsNutrition, logsWorkouts, logsWeights, loadHistory, pesoAtual, diasAtras, tipo));
     }
 
     // Salvar o relatório gerado no banco de dados
@@ -134,8 +168,10 @@ function runHeuristicFallback(
   logsNutrition: any[],
   logsWorkouts: any[],
   logsWeights: any[],
+  loadHistory: any[],
   pesoAtual: number,
-  totalDays: number
+  totalDays: number,
+  tipo: "SEMANAL" | "MENSAL" | "TREINO"
 ) {
   const diasComTreino = logsWorkouts.length;
   const totalDiasRegistrados = logsNutrition.length || 1;
@@ -150,6 +186,50 @@ function runHeuristicFallback(
   const pontosFortes: string[] = [];
   const melhorias: string[] = [];
 
+  if (tipo === "TREINO") {
+    // Fallback focado em treino
+    const totalVolumeCargas = loadHistory.reduce((sum, curr) => sum + curr.carga, 0);
+    const mediaCarga = loadHistory.length > 0 ? totalVolumeCargas / loadHistory.length : 0;
+
+    if (diasComTreino >= totalDays * 0.6) {
+      pontosFortes.push(`Consistência de treino sólida: completou ${diasComTreino} sessões.`);
+    } else {
+      melhorias.push("Tentar cumprir pelo menos 3 a 4 treinos semanais para manter estímulo de hipertrofia.");
+    }
+
+    if (mediaCarga > 0) {
+      pontosFortes.push(`Progressão de carga mapeada com média de força de ${mediaCarga.toFixed(1)} kg por exercício.`);
+      pontosFortes.push("Volume de treinamento acumulado foi de " + totalVolumeCargas.toFixed(0) + " kg no período.");
+    } else {
+      melhorias.push("Lembre-se de registrar as cargas dos seus exercícios na musculação para acompanhar o overload.");
+    }
+
+    const conteudo = `
+### 🏋️ Relatório de Desempenho e Musculação (Análise Algorítmica)
+
+Análise focada em hipertrofia e progressão de cargas nos últimos **${totalDays} dias**.
+
+#### 🎯 Diagnóstico de Treinos
+* **Sessões Realizadas:** ${diasComTreino} treinos concluídos.
+* **Consistência de Estímulo:** ${(taxaTreino).toFixed(0)}% de conformidade com o cronograma.
+* **Média de Força por Exercício:** ${mediaCarga.toFixed(1)} kg.
+
+#### 📈 Recomendações de Evolução
+* **Sobrecarga Progressiva:** Tente aumentar de 1 a 2 kg nos exercícios multiarticulares (como agachamento e supino) na próxima semana, mantendo a faixa de 8-12 repetições.
+* **Densidade de Treino:** Mantenha o descanso entre séries estritamente de 90 a 120 segundos para manter a taxa de ativação de fibras do Tipo II.
+    `.trim();
+
+    return {
+      conteudo,
+      insightsObj: {
+        pontosFortes,
+        melhorias,
+        previsaoTdee: tdeeEstimado,
+      }
+    };
+  }
+
+  // Fallback padrão de nutrição/saúde
   if (mediaAgua >= 2000) {
     pontosFortes.push(`Hidratação consistente: média diária de ${Math.round(mediaAgua)}ml.`);
   } else {

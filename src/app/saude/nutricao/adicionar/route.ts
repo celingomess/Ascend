@@ -1,9 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { updateUserStreak } from "@/lib/streaks";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { NutritionSchema } from "@/lib/schemas";
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+      return NextResponse.json({ success: false, message: "Não autorizado." }, { status: 401 });
+    }
+    const userId = session.user.id;
+
     const formData = await req.formData();
     const calorias = parseInt(formData.get("calorias") as string || "0", 10);
     const proteina = parseInt(formData.get("proteina") as string || "0", 10);
@@ -11,18 +20,25 @@ export async function POST(req: NextRequest) {
     const gordura = parseInt(formData.get("gordura") as string || "0", 10);
     const agua = parseInt(formData.get("agua") as string || "0", 10);
 
+    // Validação estrita via Zod
+    const validation = NutritionSchema.safeParse({ calorias, proteina, carboidrato, gordura, agua });
+    if (!validation.success) {
+      const errorMsg = validation.error.errors.map((e) => e.message).join(", ");
+      return NextResponse.json({ success: false, message: "Erro de validação: " + errorMsg }, { status: 400 });
+    }
+
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
 
     // Encontrar registro
     let nutrition = await prisma.daily_nutrition.findFirst({
-      where: { user_id: 1, data: hoje },
+      where: { user_id: userId, data: hoje },
     });
 
     if (!nutrition) {
       nutrition = await prisma.daily_nutrition.create({
         data: {
-          user_id: 1,
+          user_id: userId,
           data: hoje,
           calorias_consumidas: 0,
           calorias_meta: 2000,
@@ -51,9 +67,9 @@ export async function POST(req: NextRequest) {
     const metaAtingida = (updatedNutrition.calorias_consumidas ?? 0) >= (updatedNutrition.calorias_meta ?? 2000);
 
     // Gamificação: Obter usuário
-    const user = await prisma.users.findUnique({ where: { id: 1 } });
+    const user = await prisma.users.findUnique({ where: { id: userId } });
     if (!user) {
-      return NextResponse.json({ success: false, message: "User not found" }, { status: 404 });
+      return NextResponse.json({ success: false, message: "Usuário não encontrado" }, { status: 404 });
     }
 
     let xpGanho = 0;
@@ -65,7 +81,7 @@ export async function POST(req: NextRequest) {
       xpGanho += 5;
       await prisma.user_events.create({
         data: {
-          user_id: 1,
+          user_id: userId,
           titulo: "Hidratação registrada",
           descricao: `Bebeu ${agua}ml de água`,
           tipo: "saude",
@@ -80,7 +96,7 @@ export async function POST(req: NextRequest) {
       xpGanho += 15;
       await prisma.user_events.create({
         data: {
-          user_id: 1,
+          user_id: userId,
           titulo: "Meta Calórica Atingida",
           descricao: "Bateu a meta de ingestão de calorias diária",
           tipo: "saude",
@@ -101,10 +117,10 @@ export async function POST(req: NextRequest) {
       nivelSubiu = true;
     }
 
-    await updateUserStreak(1, prisma);
+    await updateUserStreak(userId, prisma);
 
     await prisma.users.update({
-      where: { id: 1 },
+      where: { id: userId },
       data: {
         xp_total: novoXp,
         nivel: novoNivel,

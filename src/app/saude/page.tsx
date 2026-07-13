@@ -1,13 +1,21 @@
 import React from "react";
 import prisma from "@/lib/prisma";
 import SaudeClientInitial from "@/components/SaudeClientInitial";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { redirect } from "next/navigation";
 
 export const revalidate = 0; // Garantir dados reais do banco MySQL
 
 export default async function SaudePage() {
-  // 1. Obter Usuário Padrão ID=1
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user) {
+    redirect("/login");
+  }
+
+  // 1. Obter Usuário Logado
   const user = await prisma.users.findUnique({
-    where: { id: 1 },
+    where: { id: session.user.id },
   });
 
   if (!user) {

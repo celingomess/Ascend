@@ -3,6 +3,9 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { updateUserStreak } from "@/lib/streaks";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { TransactionSchema, BudgetSchema } from "@/lib/schemas";
 
 // Função de parsing do comando de log rápido
 function parseQuickLog(text: string) {
@@ -84,6 +87,12 @@ function parseQuickLog(text: string) {
 
 export async function addTransactionAction(formData: FormData) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+      return { success: false, message: "Não autorizado." };
+    }
+    const userId = session.user.id;
+
     let val = 0;
     let desc = "";
     let cat = "Outros";
@@ -113,20 +122,29 @@ export async function addTransactionAction(formData: FormData) {
       cat = formData.get("categoria") as string || "Outros";
     }
 
-    if (!desc) {
-      return { success: false, message: "A descrição é obrigatória." };
-    }
-
     const dataStr = formData.get("data") as string;
     let dataT = new Date();
     if (dataStr) {
       dataT = new Date(dataStr + "T00:00:00");
     }
 
+    // Validação estrita via Zod
+    const validation = TransactionSchema.safeParse({
+      valor: val,
+      descricao: desc,
+      categoria: cat,
+      data: dataT,
+    });
+
+    if (!validation.success) {
+      const errorMsg = validation.error.errors.map((e) => e.message).join(", ");
+      return { success: false, message: "Erro de validação: " + errorMsg };
+    }
+
     // Criar transação no banco
     await prisma.financial_transactions.create({
       data: {
-        user_id: 1,
+        user_id: userId,
         valor: val,
         descricao: desc,
         categoria: cat,
@@ -140,7 +158,7 @@ export async function addTransactionAction(formData: FormData) {
     const tipoStr = val > 0 ? "entrada" : "saída";
     await prisma.user_events.create({
       data: {
-        user_id: 1,
+        user_id: userId,
         titulo: "Finanças Atualizadas",
         descricao: `Registrou ${tipoStr} de R$ ${Math.abs(val).toFixed(2)} - ${desc}`,
         tipo: "financas",
@@ -150,9 +168,9 @@ export async function addTransactionAction(formData: FormData) {
     });
 
     // Gamificação: Usuário
-    const user = await prisma.users.findUnique({ where: { id: 1 } });
+    const user = await prisma.users.findUnique({ where: { id: userId } });
     if (!user) {
-      return { success: false, message: "Usuário padrão não encontrado." };
+      return { success: false, message: "Usuário não encontrado." };
     }
 
     const oldLevel = user.nivel ?? 1;
@@ -168,10 +186,10 @@ export async function addTransactionAction(formData: FormData) {
       nivelSubiu = true;
     }
 
-    await updateUserStreak(1, prisma);
+    await updateUserStreak(userId, prisma);
 
     await prisma.users.update({
-      where: { id: 1 },
+      where: { id: userId },
       data: {
         xp_total: novoXp,
         nivel: novoNivel,
@@ -198,8 +216,14 @@ export async function addTransactionAction(formData: FormData) {
 
 export async function deleteTransactionAction(id: number) {
   try {
-    await prisma.financial_transactions.delete({
-      where: { id },
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+      return { success: false, message: "Não autorizado." };
+    }
+    const userId = session.user.id;
+
+    await prisma.financial_transactions.deleteMany({
+      where: { id, user_id: userId },
     });
 
     // Revalidar a rota de finanças para recarregar todos os dados no Server Component
@@ -213,10 +237,22 @@ export async function deleteTransactionAction(id: number) {
 
 export async function saveBudgetAction(categoria: string, limite: number) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+      return { success: false, message: "Não autorizado." };
+    }
+    const userId = session.user.id;
+
+    // Validação estrita via Zod
+    const validation = BudgetSchema.safeParse({ categoria, limite });
+    if (!validation.success) {
+      return { success: false, message: "Dados inválidos: " + validation.error.errors.map(e => e.message).join(", ") };
+    }
+
     await prisma.financial_budgets.upsert({
       where: {
         user_id_categoria: {
-          user_id: 1,
+          user_id: userId,
           categoria: categoria,
         },
       },
@@ -224,7 +260,7 @@ export async function saveBudgetAction(categoria: string, limite: number) {
         limite: limite,
       },
       create: {
-        user_id: 1,
+        user_id: userId,
         categoria: categoria,
         limite: limite,
       },
@@ -239,6 +275,12 @@ export async function saveBudgetAction(categoria: string, limite: number) {
 
 export async function addRecurringAction(formData: FormData) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+      return { success: false, message: "Não autorizado." };
+    }
+    const userId = session.user.id;
+
     const valor = parseFloat(formData.get("valor") as string || "0");
     const tipo = formData.get("tipo") as string || "saida";
     let valAdjusted = tipo === "saida" ? -Math.abs(valor) : Math.abs(valor);
@@ -253,7 +295,7 @@ export async function addRecurringAction(formData: FormData) {
 
     await prisma.recurring_transactions.create({
       data: {
-        user_id: 1,
+        user_id: userId,
         valor: valAdjusted,
         descricao: descricao,
         categoria: categoria,
@@ -271,8 +313,14 @@ export async function addRecurringAction(formData: FormData) {
 
 export async function deleteRecurringAction(id: number) {
   try {
-    await prisma.recurring_transactions.delete({
-      where: { id },
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+      return { success: false, message: "Não autorizado." };
+    }
+    const userId = session.user.id;
+
+    await prisma.recurring_transactions.deleteMany({
+      where: { id, user_id: userId },
     });
 
     revalidatePath("/financas");
@@ -284,8 +332,14 @@ export async function deleteRecurringAction(id: number) {
 
 export async function checkAndProcessRecurringTransactions() {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+      return { success: false, message: "Não autorizado." };
+    }
+    const userId = session.user.id;
+
     const recurrings = await prisma.recurring_transactions.findMany({
-      where: { user_id: 1 },
+      where: { user_id: userId },
     });
 
     const hoje = new Date();
@@ -311,7 +365,7 @@ export async function checkAndProcessRecurringTransactions() {
 
             await tx.financial_transactions.create({
               data: {
-                user_id: 1,
+                user_id: userId,
                 valor: freshRec.valor,
                 descricao: freshRec.descricao + " (Recorrente)",
                 categoria: freshRec.categoria,
@@ -321,7 +375,7 @@ export async function checkAndProcessRecurringTransactions() {
 
             await tx.user_events.create({
               data: {
-                user_id: 1,
+                user_id: userId,
                 titulo: "Lançamento Automático",
                 descricao: `Processou despesa fixa de R$ ${Math.abs(freshRec.valor).toFixed(2)} - ${freshRec.descricao}`,
                 tipo: "financas",
@@ -330,7 +384,7 @@ export async function checkAndProcessRecurringTransactions() {
               },
             });
 
-            const user = await tx.users.findUnique({ where: { id: 1 } });
+            const user = await tx.users.findUnique({ where: { id: userId } });
             if (user) {
               const oldLevel = user.nivel ?? 1;
               let novoXp = (user.xp_total ?? 0) + 5;
@@ -339,7 +393,7 @@ export async function checkAndProcessRecurringTransactions() {
                 novoNivel += 1;
               }
               await tx.users.update({
-                where: { id: 1 },
+                where: { id: userId },
                 data: {
                   xp_total: novoXp,
                   nivel: novoNivel,

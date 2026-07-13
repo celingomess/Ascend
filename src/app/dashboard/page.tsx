@@ -9,15 +9,23 @@ import {
   gerarHeatmapConsistencia,
   obterClasseCorRank,
 } from "@/lib/utils";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { redirect } from "next/navigation";
 
 import "@/styles/dashboard.css";
 
 export const revalidate = 0; // Evitar cache em desenvolvimento e produção para reatividade do banco de dados
 
 export default async function DashboardPage() {
-  // 1. Obter Usuário Padrão ID=1
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user) {
+    redirect("/login");
+  }
+
+  // 1. Obter Usuário Logado
   const user = await prisma.users.findUnique({
-    where: { id: 1 },
+    where: { id: session.user.id },
   });
 
   if (!user) {

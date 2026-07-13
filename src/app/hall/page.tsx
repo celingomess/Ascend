@@ -1,7 +1,9 @@
 import React from "react";
 import prisma from "@/lib/prisma";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import {
   calcularTituloAscend,
   calcularAvatarFrame,
@@ -13,9 +15,14 @@ import "@/styles/hall_ascensao.css";
 export const revalidate = 0; // Garantir dados em tempo real
 
 export default async function HallPage() {
-  // 1. Obter Usuário Padrão ID=1
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user) {
+    redirect("/login");
+  }
+
+  // 1. Obter Usuário Logado
   const usuario = await prisma.users.findUnique({
-    where: { id: 1 },
+    where: { id: session.user.id },
   });
 
   if (!usuario) {

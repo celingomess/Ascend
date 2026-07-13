@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+      return NextResponse.json({ success: false, message: "Não autorizado." }, { status: 401 });
+    }
+    const userId = session.user.id;
+
     const transactions = await prisma.financial_transactions.findMany({
-      where: { user_id: 1 },
+      where: { user_id: userId },
       orderBy: { data: "desc" },
     });
 

@@ -1,14 +1,22 @@
 import React from "react";
 import prisma from "@/lib/prisma";
 import Link from "next/link";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { redirect } from "next/navigation";
 import "@/styles/conquistas.css";
 
 export const revalidate = 0; // Garantir dados em tempo real
 
 export default async function ConquistasPage() {
-  // Buscar conquistas desbloqueadas do usuário ID=1
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user) {
+    redirect("/login");
+  }
+
+  // Buscar conquistas desbloqueadas do usuário logado
   const conquistas = await prisma.achievements.findMany({
-    where: { user_id: 1 },
+    where: { user_id: session.user.id },
     orderBy: { data_desbloqueio: "desc" },
   });
 

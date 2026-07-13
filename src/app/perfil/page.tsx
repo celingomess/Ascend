@@ -1,6 +1,6 @@
 import React from "react";
 import prisma from "@/lib/prisma";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import {
   calcularTituloAscend,
   calcularAvatarFrame,
@@ -8,13 +8,20 @@ import {
   obterDominiosAscensao,
 } from "@/lib/utils";
 import PerfilClientInitial from "@/components/PerfilClientInitial";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 export const revalidate = 0; // Garantir dados em tempo real
 
 export default async function PerfilPage() {
-  // 1. Obter Usuário Padrão ID=1
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user) {
+    redirect("/login");
+  }
+
+  // 1. Obter Usuário Logado
   const usuario = await prisma.users.findUnique({
-    where: { id: 1 },
+    where: { id: session.user.id },
   });
 
   if (!usuario) {

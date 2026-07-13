@@ -2,16 +2,24 @@ import React from "react";
 import prisma from "@/lib/prisma";
 import { FinancasClientInitial } from "@/components/FinancasClientInitial";
 import { checkAndProcessRecurringTransactions } from "@/app/financas/actions";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { redirect } from "next/navigation";
 
 export const revalidate = 0; // Garantir dados em tempo real do banco MySQL
 
 export default async function FinancasPage() {
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user) {
+    redirect("/login");
+  }
+
   // 1. Processar transações recorrentes automáticas pendentes de forma segura
   await checkAndProcessRecurringTransactions();
 
-  // 2. Obter Usuário Padrão ID=1
+  // 2. Obter Usuário Logado
   const user = await prisma.users.findUnique({
-    where: { id: 1 },
+    where: { id: session.user.id },
   });
 
   if (!user) {

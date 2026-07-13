@@ -1,18 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { updateUserStreak } from "@/lib/streaks";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 export async function POST(
   req: NextRequest,
   { params }: { params: { workout_id: string } }
 ) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+      return NextResponse.json({ success: false, message: "Não autorizado." }, { status: 401 });
+    }
+    const userId = session.user.id;
+
     const workoutId = parseInt(params.workout_id, 10);
 
     // Criar log de treino concluído
     const log = await prisma.workout_logs.create({
       data: {
-        user_id: 1,
+        user_id: userId,
         workout_id: workoutId,
         data_conclusao: new Date(),
       },
@@ -27,7 +35,7 @@ export async function POST(
     // Registrar Evento
     await prisma.user_events.create({
       data: {
-        user_id: 1,
+        user_id: userId,
         titulo: "Treino Concluído",
         descricao: `Finalizou o treino: ${workout?.nome || "Ficha"}`,
         tipo: "saude",
@@ -37,7 +45,7 @@ export async function POST(
     });
 
     // Atualizar XP e nível do usuário
-    const user = await prisma.users.findUnique({ where: { id: 1 } });
+    const user = await prisma.users.findUnique({ where: { id: userId } });
     if (!user) {
       return NextResponse.json({ success: false, message: "User not found" }, { status: 404 });
     }
@@ -54,10 +62,10 @@ export async function POST(
       nivelSubiu = true;
     }
 
-    await updateUserStreak(1, prisma);
+    await updateUserStreak(userId, prisma);
 
     await prisma.users.update({
-      where: { id: 1 },
+      where: { id: userId },
       data: {
         xp_total: novoXp,
         nivel: novoNivel,

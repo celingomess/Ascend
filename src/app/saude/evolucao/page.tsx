@@ -97,7 +97,7 @@ export default async function EvolucaoPage() {
   }));
 
   return (
-    <div className="container-fluid min-vh-100 bg-dark text-white py-4" style={{ background: "var(--dark-primary)" }}>
+    <div className="container-fluid py-4">
       <EvolucaoClient
         initialWeights={serializedWeights}
         initialNutritions={serializedNutritions}

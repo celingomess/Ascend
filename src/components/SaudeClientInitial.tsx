@@ -5,7 +5,7 @@ import Link from "next/link";
 import confetti from "canvas-confetti";
 import { useLevelUp } from "./LevelUpContext";
 import Chart from "chart.js/auto";
-import { parseExpressMealAction } from "@/app/saude/actions";
+import { parseExpressMealAction, parseExpressWorkoutAction } from "@/app/saude/actions";
 
 import "@/styles/health.css";
 
@@ -251,6 +251,11 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
   const [isExpressLoading, setIsExpressLoading] = useState(false);
   const [expressError, setExpressError] = useState<string | null>(null);
 
+  // Estados para Registro de Treino Expresso com IA
+  const [workoutTextInput, setWorkoutTextInput] = useState("");
+  const [isWorkoutLoading, setIsWorkoutLoading] = useState(false);
+  const [workoutError, setWorkoutError] = useState<string | null>(null);
+
   // Parser inteligente de linhas de treino
   const parseExerciseLine = (line: string) => {
     line = line.trim();
@@ -380,6 +385,42 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
       setExpressError("Erro de rede: " + err.message);
     } finally {
       setIsExpressLoading(false);
+    }
+  };
+
+  // Registrar Treino Expresso com IA
+  const handleExpressWorkoutRegister = async () => {
+    if (!workoutTextInput.trim()) {
+      setWorkoutError("Por favor, digite a descrição do seu treino.");
+      return;
+    }
+    setIsWorkoutLoading(true);
+    setWorkoutError(null);
+    try {
+      const res = await parseExpressWorkoutAction(workoutTextInput);
+      if (res.success) {
+        setWorkoutTextInput("");
+        if (res.nivel_subiu) {
+          triggerLevelUp(res.usuario_nivel - 1, res.usuario_nivel);
+        } else {
+          if (typeof window !== "undefined" && (window as any).AscendSFX) {
+            (window as any).AscendSFX.playSuccess();
+          }
+          confetti({
+            particleCount: 150,
+            spread: 85,
+            origin: { y: 0.6 },
+          });
+          alert(`${res.mensagem} (+${res.xp_ganho} XP!)`);
+          window.location.reload();
+        }
+      } else {
+        setWorkoutError("Erro na IA: " + res.message);
+      }
+    } catch (err: any) {
+      setWorkoutError("Erro de conexão: " + err.message);
+    } finally {
+      setIsWorkoutLoading(false);
     }
   };
 
@@ -1224,6 +1265,56 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
                 ))}
               </div>
             )}
+
+            {/* Registrar Treino via Texto (IA) */}
+            <div
+              className="mt-4 p-3 rounded"
+              style={{
+                background: "rgba(255,255,255,0.02)",
+                border: "1px solid rgba(226,201,133,0.15)",
+                boxShadow: isWorkoutLoading ? "0 0 15px rgba(212, 175, 55, 0.25)" : "none",
+                transition: "box-shadow 0.3s ease-in-out"
+              }}
+            >
+              <div className="d-flex align-items-center justify-content-between mb-2">
+                <span
+                  className="text-warning small fw-bold d-flex align-items-center gap-1.5"
+                  style={{ fontSize: "0.82rem", textTransform: "uppercase" }}
+                >
+                  <i className="bi bi-sparkles"></i> Registrar Treino via Texto (IA)
+                </span>
+                <span className="badge bg-black text-warning border border-secondary" style={{ fontSize: "0.68rem" }}>
+                  +30 XP ⚡
+                </span>
+              </div>
+              
+              <div className="mb-3">
+                <textarea
+                  className="form-control bg-transparent text-white border-secondary small"
+                  style={{ height: "80px", fontSize: "0.85rem" }}
+                  placeholder="Ex: Treinei Peito e Tríceps hoje. Fiz Supino Reto: 4x10 com 60kg, Tríceps Corda: 3x12 com 25kg, Crucifixo Inclinado: 4x8 com 20kg de cada lado."
+                  value={workoutTextInput}
+                  onChange={(e) => setWorkoutTextInput(e.target.value)}
+                  disabled={isWorkoutLoading}
+                />
+                {workoutError && (
+                  <div className="text-danger small mt-1.5" style={{ fontSize: "0.75rem" }}>
+                    {workoutError}
+                  </div>
+                )}
+              </div>
+
+              <button
+                type="button"
+                className={`btn btn-sm btn-ascend w-100 d-flex align-items-center justify-content-center gap-2 ${isWorkoutLoading ? "placeholder-wave" : ""}`}
+                onClick={handleExpressWorkoutRegister}
+                disabled={isWorkoutLoading}
+                style={{ minHeight: "38px" }}
+              >
+                <i className="bi bi-magic"></i>
+                {isWorkoutLoading ? "IA Analisando e Salvando..." : "Registrar Treino com IA"}
+              </button>
+            </div>
           </div>
         </div>
       </div>

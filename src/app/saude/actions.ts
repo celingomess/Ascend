@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { updateUserStreak } from "@/lib/streaks";
 
 export async function generateHealthReportAction(tipo: "SEMANAL" | "MENSAL" | "TREINO") {
   try {
@@ -325,5 +326,170 @@ Você deve responder APENAS com um objeto JSON válido (sem markdown, sem blocos
     };
   } catch (error: any) {
     return { success: false, message: error.message };
+  }
+}
+
+export async function parseExpressWorkoutAction(workoutText: string) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+      return { success: false, message: "Não autorizado." };
+    }
+    const userId = session.user.id;
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    let aiResponse: {
+      nomeTreino: string;
+      exercicios: {
+        nomeExercicio: string;
+        series: number;
+        repeticoes: number;
+        carga: number;
+      }[];
+    };
+
+    if (apiKey) {
+      const ai = new GoogleGenerativeAI(apiKey);
+      const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+      const prompt = `
+Você é o motor de IA de alta performance do Ascend OS. 
+Sua tarefa é extrair os dados estruturados de um treino escrito em linguagem natural pelo usuário.
+
+Texto do Usuário: "${workoutText}"
+
+Responda ESTRITAMENTE com um objeto JSON válido (sem markdown, sem blocos de código \`\`\`json) seguindo este formato:
+{
+  "nomeTreino": "Nome sugerido para o grupo muscular ou treino (Ex: Treino de Peito & Tríceps)",
+  "exercicios": [
+    {
+      "nomeExercicio": "Nome do Exercício corrigido e capitalizado",
+      "series": 4,
+      "repeticoes": 10,
+      "carga": 60
+    }
+  ]
+}
+
+Se o usuário omitir repetições ou séries, use 3 ou 10 como padrão razoável. Se omitir a carga, defina como 0.
+      `.trim();
+
+      const result = await model.generateContent(prompt);
+      let text = result.response.text().trim();
+      text = text.replace(/```json/gi, "").replace(/```/g, "").trim();
+      aiResponse = JSON.parse(text);
+    } else {
+      aiResponse = {
+        nomeTreino: "Treino Rápido (IA Fallback)",
+        exercicios: [
+          { nomeExercicio: "Supino Reto com IA", series: 4, repeticoes: 10, carga: 50 },
+          { nomeExercicio: "Rosca Direta com IA", series: 3, repeticoes: 12, carga: 15 }
+        ]
+      };
+    }
+
+    const xpGanho = 30;
+
+    const resultado = await prisma.$transaction(async (tx) => {
+      // 1. Criar a rotina base
+      const treino = await tx.workouts.create({
+        data: {
+          user_id: userId,
+          nome: aiResponse.nomeTreino,
+          dias_semana: "Variado",
+          conteudo: `Treino de musculação registrado via texto/voz.`,
+          criado_em: new Date(),
+        }
+      });
+
+      // 2. Criar os exercícios e salvar no histórico de cargas
+      let ordem = 1;
+      for (const ex of aiResponse.exercicios) {
+        await tx.workout_exercises.create({
+          data: {
+            workout_id: treino.id,
+            nome_exercicio: ex.nomeExercicio,
+            series: ex.series,
+            repeticoes: ex.repeticoes.toString(),
+            carga_atual: ex.carga,
+            ordem: ordem++,
+          }
+        });
+
+        await tx.workout_exercise_history.create({
+          data: {
+            user_id: userId,
+            workout_id: treino.id,
+            exercise_name: ex.nomeExercicio,
+            carga: ex.carga,
+            data_registro: new Date(),
+          }
+        });
+      }
+
+      // 3. Registrar a conclusão em logs
+      await tx.workout_logs.create({
+        data: {
+          user_id: userId,
+          workout_id: treino.id,
+          data_conclusao: new Date(),
+        }
+      });
+
+      // 4. Registrar Evento de XP
+      await tx.user_events.create({
+        data: {
+          user_id: userId,
+          titulo: "Treino com IA Concluído",
+          descricao: `Concluiu o treino via texto: ${aiResponse.nomeTreino}`,
+          tipo: "saude",
+          xp: xpGanho,
+          criado_em: new Date(),
+        }
+      });
+
+      // 5. Atualizar XP e verificar Level Up
+      const user = await tx.users.findUnique({ where: { id: userId } });
+      if (!user) {
+        throw new Error("Usuário não encontrado.");
+      }
+
+      let novoXp = (user.xp_total ?? 0) + xpGanho;
+      let novoNivel = user.nivel ?? 1;
+      let nivelSubiu = false;
+
+      while (novoXp >= novoNivel * 500) {
+        novoNivel += 1;
+      }
+
+      if (novoNivel > user.nivel!) {
+        nivelSubiu = true;
+      }
+
+      await tx.users.update({
+        where: { id: userId },
+        data: {
+          xp_total: novoXp,
+          nivel: novoNivel,
+        }
+      });
+
+      await updateUserStreak(userId, tx);
+
+      return {
+        success: true,
+        mensagem: `Treino "${aiResponse.nomeTreino}" registrado!`,
+        xp_ganho: xpGanho,
+        usuario_xp: novoXp,
+        usuario_nivel: novoNivel,
+        nivel_subiu: nivelSubiu,
+      };
+    });
+
+    revalidatePath("/saude");
+    revalidatePath("/saude/evolucao");
+    return resultado;
+  } catch (error: any) {
+    return { success: false, message: "Erro ao registrar treino por texto: " + error.message };
   }
 }

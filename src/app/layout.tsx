@@ -70,13 +70,23 @@ export default async function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               if ('serviceWorker' in navigator) {
-                window.addEventListener('load', function() {
-                  navigator.serviceWorker.register('/sw.js').then(function(reg) {
-                    console.log('PWA ServiceWorker registrado com sucesso:', reg.scope);
-                  }).catch(function(err) {
-                    console.log('Falha ao registrar PWA ServiceWorker:', err);
+                if (window.location.hostname === 'localhost') {
+                  navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                    for (let registration of registrations) {
+                      registration.unregister().then(function(boolean) {
+                        if (boolean) console.log('ServiceWorker do localhost removido para evitar cache conflituoso.');
+                      });
+                    }
                   });
-                });
+                } else {
+                  window.addEventListener('load', function() {
+                    navigator.serviceWorker.register('/sw.js').then(function(reg) {
+                      console.log('PWA ServiceWorker registrado com sucesso:', reg.scope);
+                    }).catch(function(err) {
+                      console.log('Falha ao registrar PWA ServiceWorker:', err);
+                    });
+                  });
+                }
               }
             `,
           }}

@@ -5,6 +5,7 @@ import Link from "next/link";
 import confetti from "canvas-confetti";
 import { useLevelUp } from "./LevelUpContext";
 import Chart from "chart.js/auto";
+import { parseExpressMealAction } from "@/app/saude/actions";
 
 import "@/styles/health.css";
 
@@ -241,6 +242,15 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
   const [exerciseModalTab, setExerciseModalTab] = useState<"individual" | "batch">("individual");
   const [batchText, setBatchText] = useState("");
 
+  // Estados controlados para macros e Express IA
+  const [caloriesInput, setCaloriesInput] = useState("");
+  const [proteinInput, setProteinInput] = useState("");
+  const [carbsInput, setCarbsInput] = useState("");
+  const [fatInput, setFatInput] = useState("");
+  const [expressInput, setExpressInput] = useState("");
+  const [isExpressLoading, setIsExpressLoading] = useState(false);
+  const [expressError, setExpressError] = useState<string | null>(null);
+
   // Parser inteligente de linhas de treino
   const parseExerciseLine = (line: string) => {
     line = line.trim();
@@ -331,12 +341,45 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
             origin: { y: 0.6 },
           });
         }
+        setCaloriesInput("");
+        setProteinInput("");
+        setCarbsInput("");
+        setFatInput("");
+        setExpressInput("");
         form.reset();
       } else {
         alert("Erro ao salvar: " + data.message);
       }
     } catch (err: any) {
       alert("Erro ao conectar: " + err.message);
+    }
+  };
+
+  // Express com IA para refeições
+  const handleExpressMealParse = async () => {
+    if (!expressInput.trim()) {
+      setExpressError("Por favor, descreva o que comeu.");
+      return;
+    }
+    setIsExpressLoading(true);
+    setExpressError(null);
+    try {
+      const res = await parseExpressMealAction(expressInput);
+      if (res.success) {
+        setCaloriesInput(res.calorias ? res.calorias.toString() : "0");
+        setProteinInput(res.proteina ? res.proteina.toString() : "0");
+        setCarbsInput(res.carboidrato ? res.carboidrato.toString() : "0");
+        setFatInput(res.gordura ? res.gordura.toString() : "0");
+        if (typeof window !== "undefined" && (window as any).AscendSFX) {
+          (window as any).AscendSFX.playClick();
+        }
+      } else {
+        setExpressError("IA falhou: " + res.message);
+      }
+    } catch (err: any) {
+      setExpressError("Erro de rede: " + err.message);
+    } finally {
+      setIsExpressLoading(false);
     }
   };
 
@@ -780,14 +823,45 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
               className="row g-2 mb-4 p-3 rounded"
               style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(226,201,133,0.1)" }}
             >
-              <div className="col-12 mb-1">
+              <div className="col-12 mb-1 d-flex align-items-center justify-content-between">
                 <span
                   className="text-muted small"
                   style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase" }}
                 >
                   Lançar refeição rápida
                 </span>
+                <span className="text-warning small" style={{ fontSize: "0.68rem" }}>
+                  <i className="bi bi-sparkles"></i> Express com IA
+                </span>
               </div>
+              
+              <div className="col-12 mb-2">
+                <div className="input-group input-group-sm">
+                  <input
+                    type="text"
+                    className="form-control border-secondary text-white bg-transparent"
+                    placeholder="Ex: Mandioca com patinho grelhado ou 3 ovos mexidos"
+                    value={expressInput}
+                    onChange={(e) => setExpressInput(e.target.value)}
+                  />
+                  <button
+                    className="btn btn-outline-warning text-warning d-flex align-items-center gap-1"
+                    type="button"
+                    onClick={handleExpressMealParse}
+                    disabled={isExpressLoading}
+                    style={{ background: "rgba(212, 175, 55, 0.05)" }}
+                  >
+                    <i className="bi bi-magic"></i>
+                    {isExpressLoading ? "Calculando..." : "Estimar"}
+                  </button>
+                </div>
+                {expressError && (
+                  <div className="text-danger small mt-1" style={{ fontSize: "0.7rem" }}>
+                    {expressError}
+                  </div>
+                )}
+              </div>
+
               <div className="col-6 col-md-3">
                 <input
                   type="number"
@@ -795,6 +869,8 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
                   name="calorias"
                   placeholder="Kcal"
                   min="0"
+                  value={caloriesInput}
+                  onChange={(e) => setCaloriesInput(e.target.value)}
                 />
               </div>
               <div className="col-6 col-md-3">
@@ -804,6 +880,8 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
                   name="proteina"
                   placeholder="P (g)"
                   min="0"
+                  value={proteinInput}
+                  onChange={(e) => setProteinInput(e.target.value)}
                 />
               </div>
               <div className="col-6 col-md-3">
@@ -813,6 +891,8 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
                   name="carboidrato"
                   placeholder="C (g)"
                   min="0"
+                  value={carbsInput}
+                  onChange={(e) => setCarbsInput(e.target.value)}
                 />
               </div>
               <div className="col-6 col-md-3">
@@ -822,6 +902,8 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
                   name="gordura"
                   placeholder="G (g)"
                   min="0"
+                  value={fatInput}
+                  onChange={(e) => setFatInput(e.target.value)}
                 />
               </div>
               <div className="col-12 mt-2">

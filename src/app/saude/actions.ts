@@ -272,3 +272,58 @@ Seu **TDEE Dinâmico** calculado para manutenção é de aproximadamente **${tde
     }
   };
 }
+
+export async function parseExpressMealAction(mealDescription: string) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+      return { success: false, message: "Não autorizado." };
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return {
+        success: true,
+        calorias: 350,
+        proteina: 25,
+        carboidrato: 45,
+        gordura: 8,
+        observacao: "Heurística padrão (Sem chave Gemini)."
+      };
+    }
+
+    const ai = new GoogleGenerativeAI(apiKey);
+    const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    const prompt = `
+Você é o Nutricionista e Analista de Alimentos com IA do Ascend OS.
+Sua tarefa é analisar a seguinte descrição de refeição ou alimento digitado pelo usuário: "${mealDescription}"
+
+Estime os valores nutricionais aproximados (calorias em kcal, proteínas em gramas, carboidratos em gramas, gorduras em gramas).
+Forneça os valores na descrição mais próxima e plausível baseada em porções médias de consumo.
+
+Você deve responder APENAS com um objeto JSON válido (sem markdown, sem blocos de código \`\`\`) contendo as seguintes propriedades numéricas:
+{
+  "calorias": 0,
+  "proteina": 0,
+  "carboidrato": 0,
+  "gordura": 0
+}
+    `.trim();
+
+    const result = await model.generateContent(prompt);
+    let text = result.response.text().trim();
+    text = text.replace(/```json/gi, "").replace(/```/g, "").trim();
+
+    const parsed = JSON.parse(text);
+    return {
+      success: true,
+      calorias: parsed.calorias || 0,
+      proteina: parsed.proteina || 0,
+      carboidrato: parsed.carboidrato || 0,
+      gordura: parsed.gordura || 0
+    };
+  } catch (error: any) {
+    return { success: false, message: error.message };
+  }
+}

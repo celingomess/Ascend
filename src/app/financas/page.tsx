@@ -1,11 +1,15 @@
 import React from "react";
 import prisma from "@/lib/prisma";
-import FinancasClientInitial from "@/components/FinancasClientInitial";
+import { FinancasClientInitial } from "@/components/FinancasClientInitial";
+import { checkAndProcessRecurringTransactions } from "@/app/financas/actions";
 
 export const revalidate = 0; // Garantir dados em tempo real do banco MySQL
 
 export default async function FinancasPage() {
-  // 1. Obter Usuário Padrão ID=1
+  // 1. Processar transações recorrentes automáticas pendentes de forma segura
+  await checkAndProcessRecurringTransactions();
+
+  // 2. Obter Usuário Padrão ID=1
   const user = await prisma.users.findUnique({
     where: { id: 1 },
   });
@@ -19,13 +23,22 @@ export default async function FinancasPage() {
     );
   }
 
-  // 2. Obter transações do usuário
+  // 3. Obter transações do usuário
   const transactions = await prisma.financial_transactions.findMany({
     where: { user_id: user.id },
     orderBy: [{ data: "desc" }, { id: "desc" }],
   });
 
-  // 3. Cálculos de Saldo e Totais do Mês Corrente
+  // 4. Obter orçamentos e transações recorrentes
+  const budgets = await prisma.financial_budgets.findMany({
+    where: { user_id: user.id },
+  });
+
+  const recurrings = await prisma.recurring_transactions.findMany({
+    where: { user_id: user.id },
+  });
+
+  // 5. Cálculos de Saldo e Totais do Mês Corrente
   const saldoTotal = transactions.reduce((acc, t) => acc + (t.valor ?? 0), 0);
 
   const hoje = new Date();
@@ -45,7 +58,7 @@ export default async function FinancasPage() {
     .filter((t) => (t.valor ?? 0) < 0)
     .reduce((acc, t) => acc + (t.valor ?? 0), 0);
 
-  // 4. Distribuição por categorias para o gráfico
+  // 6. Distribuição por categorias para o gráfico
   const categoriasDict: Record<string, number> = {};
   transactions.forEach((t) => {
     if ((t.valor ?? 0) < 0) {
@@ -67,6 +80,8 @@ export default async function FinancasPage() {
       initialEntradasMes={entradasMes}
       initialSaidasMes={Math.abs(saidasMes)}
       initialDadosCategorias={dadosCategorias}
+      initialBudgets={budgets}
+      initialRecurrings={recurrings}
     />
   );
 }

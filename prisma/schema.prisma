@@ -220,3 +220,22 @@ model workout_exercise_history {
   @@index([user_id], map: "user_id")
   @@index([workout_id], map: "workout_id")
 }
+
+model financial_budgets {
+  id        Int    @id @default(autoincrement())
+  user_id   Int
+  categoria String @db.VarChar(100)
+  limite    Float  @db.Float
+
+  @@unique([user_id, categoria], map: "user_id_categoria_unique")
+}
+
+model recurring_transactions {
+  id         Int       @id @default(autoincrement())
+  user_id    Int
+  valor      Float     @db.Float
+  descricao  String    @db.VarChar(255)
+  categoria  String    @db.VarChar(100)
+  dia_mes    Int
+  ultimo_mes DateTime? @db.Date
+}

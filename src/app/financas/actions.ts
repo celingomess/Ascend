@@ -208,3 +208,152 @@ export async function deleteTransactionAction(id: number) {
     return { success: false, message: "Erro ao deletar transação: " + error.message };
   }
 }
+
+export async function saveBudgetAction(categoria: string, limite: number) {
+  try {
+    await prisma.financial_budgets.upsert({
+      where: {
+        user_id_categoria: {
+          user_id: 1,
+          categoria: categoria,
+        },
+      },
+      update: {
+        limite: limite,
+      },
+      create: {
+        user_id: 1,
+        categoria: categoria,
+        limite: limite,
+      },
+    });
+
+    revalidatePath("/financas");
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, message: "Erro ao salvar teto: " + error.message };
+  }
+}
+
+export async function addRecurringAction(formData: FormData) {
+  try {
+    const valor = parseFloat(formData.get("valor") as string || "0");
+    const tipo = formData.get("tipo") as string || "saida";
+    let valAdjusted = tipo === "saida" ? -Math.abs(valor) : Math.abs(valor);
+
+    const descricao = (formData.get("descricao") as string || "").trim();
+    const categoria = (formData.get("categoria") as string || "Outros").trim();
+    const diaMes = parseInt(formData.get("dia_mes") as string || "1", 10);
+
+    if (!descricao) {
+      return { success: false, message: "Descrição é obrigatória." };
+    }
+
+    await prisma.recurring_transactions.create({
+      data: {
+        user_id: 1,
+        valor: valAdjusted,
+        descricao: descricao,
+        categoria: categoria,
+        dia_mes: diaMes,
+        ultimo_mes: null,
+      },
+    });
+
+    revalidatePath("/financas");
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, message: "Erro ao criar recorrência: " + error.message };
+  }
+}
+
+export async function deleteRecurringAction(id: number) {
+  try {
+    await prisma.recurring_transactions.delete({
+      where: { id },
+    });
+
+    revalidatePath("/financas");
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, message: "Erro ao excluir recorrência: " + error.message };
+  }
+}
+
+export async function checkAndProcessRecurringTransactions() {
+  try {
+    const recurrings = await prisma.recurring_transactions.findMany({
+      where: { user_id: 1 },
+    });
+
+    const hoje = new Date();
+    const mesAtualStr = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}`;
+
+    for (const rec of recurrings) {
+      const uMesStr = rec.ultimo_mes ? `${rec.ultimo_mes.getFullYear()}-${String(rec.ultimo_mes.getMonth() + 1).padStart(2, "0")}` : null;
+
+      if (uMesStr !== mesAtualStr && hoje.getDate() >= rec.dia_mes) {
+        await prisma.$transaction(async (tx) => {
+          const freshRec = await tx.recurring_transactions.findUnique({
+            where: { id: rec.id },
+          });
+          if (!freshRec) return;
+
+          const freshUMesStr = freshRec.ultimo_mes ? `${freshRec.ultimo_mes.getFullYear()}-${String(freshRec.ultimo_mes.getMonth() + 1).padStart(2, "0")}` : null;
+
+          if (freshUMesStr !== mesAtualStr) {
+            await tx.recurring_transactions.update({
+              where: { id: freshRec.id },
+              data: { ultimo_mes: new Date(`${mesAtualStr}-01T00:00:00`) },
+            });
+
+            await tx.financial_transactions.create({
+              data: {
+                user_id: 1,
+                valor: freshRec.valor,
+                descricao: freshRec.descricao + " (Recorrente)",
+                categoria: freshRec.categoria,
+                data: new Date(),
+              },
+            });
+
+            await tx.user_events.create({
+              data: {
+                user_id: 1,
+                titulo: "Lançamento Automático",
+                descricao: `Processou despesa fixa de R$ ${Math.abs(freshRec.valor).toFixed(2)} - ${freshRec.descricao}`,
+                tipo: "financas",
+                xp: 5,
+                criado_em: new Date(),
+              },
+            });
+
+            const user = await tx.users.findUnique({ where: { id: 1 } });
+            if (user) {
+              const oldLevel = user.nivel ?? 1;
+              let novoXp = (user.xp_total ?? 0) + 5;
+              let novoNivel = oldLevel;
+              while (novoXp >= novoNivel * 500) {
+                novoNivel += 1;
+              }
+              await tx.users.update({
+                where: { id: 1 },
+                data: {
+                  xp_total: novoXp,
+                  nivel: novoNivel,
+                  ultima_atividade: new Date(),
+                },
+              });
+            }
+          }
+        });
+      }
+    }
+
+    revalidatePath("/financas");
+    return { success: true };
+  } catch (error: any) {
+    console.error("Erro ao processar transações recorrentes: ", error);
+    return { success: false, message: error.message };
+  }
+}

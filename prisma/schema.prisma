@@ -239,3 +239,23 @@ model recurring_transactions {
   dia_mes    Int
   ultimo_mes DateTime? @db.Date
 }
+
+model WeightHistory {
+  id           Int      @id @default(autoincrement())
+  userId       Int      @map("user_id")
+  peso         Float    @db.Float
+  dataRegistro DateTime @default(now()) @db.DateTime(0) @map("data_registro")
+
+  @@map("weight_history")
+}
+
+model HealthAiReports {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  criadoEm  DateTime @default(now()) @db.DateTime(0) @map("criado_em")
+  tipo      String   @db.VarChar(50) // "SEMANAL" ou "MENSAL"
+  conteudo  String   @db.Text
+  insights  Json     // Armazena o array/objeto estruturado nativamente
+
+  @@map("health_ai_reports")
+}

@@ -28,6 +28,14 @@ export async function POST(req: NextRequest) {
       data: { peso: peso },
     });
 
+    // Registrar também no histórico de pesos
+    await prisma.weightHistory.create({
+      data: {
+        userId: userId,
+        peso: peso,
+      },
+    });
+
     return NextResponse.json({ success: true, peso: peso });
   } catch (error: any) {
     return NextResponse.json({ success: false, message: error.message }, { status: 400 });

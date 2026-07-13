@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import confetti from "canvas-confetti";
 import { useLevelUp } from "./LevelUpContext";
 import Chart from "chart.js/auto";
@@ -621,13 +622,21 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
           </span>
           <h2 className="ascend-title mb-0">Saúde & Nutrição</h2>
         </div>
-        <button
-          type="button"
-          className="btn btn-ascend"
-          onClick={() => setIsNovoTreinoOpen(true)}
-        >
-          <i className="bi bi-plus-lg"></i> Novo Treino
-        </button>
+        <div className="d-flex gap-2">
+          <Link
+            href="/saude/evolucao"
+            className="btn btn-outline-secondary border-secondary text-white d-flex align-items-center gap-2"
+          >
+            <i className="bi bi-graph-up"></i> Evolução & IA
+          </Link>
+          <button
+            type="button"
+            className="btn btn-ascend"
+            onClick={() => setIsNovoTreinoOpen(true)}
+          >
+            <i className="bi bi-plus-lg"></i> Novo Treino
+          </button>
+        </div>
       </div>
 
       {/* Layout Dividido */}

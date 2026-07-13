@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Chart from "chart.js/auto";
+import { addTransactionAction, deleteTransactionAction } from "@/app/financas/actions";
+import { useLevelUp } from "@/components/LevelUpContext";
 
 import "@/styles/finance.css";
 
@@ -42,6 +44,16 @@ export const FinancasClientInitial: React.FC<FinancasClientInitialProps> = ({
   const [saldoTotal, setSaldoTotal] = useState<number>(initialSaldoTotal);
   const [entradasMes, setEntradasMes] = useState<number>(initialEntradasMes);
   const [saidasMes, setSaidasMes] = useState<number>(initialSaidasMes);
+
+  const { triggerLevelUp } = useLevelUp();
+
+  // Sincronizar estado cliente com as props atualizadas pelo servidor (revalidatePath)
+  useEffect(() => {
+    setTransactions(initialTransactions);
+    setSaldoTotal(initialSaldoTotal);
+    setEntradasMes(initialEntradasMes);
+    setSaidasMes(initialSaidasMes);
+  }, [initialTransactions, initialSaldoTotal, initialEntradasMes, initialSaidasMes]);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const chartRef = useRef<Chart | null>(null);
@@ -123,42 +135,6 @@ export const FinancasClientInitial: React.FC<FinancasClientInitialProps> = ({
     }
   }, []);
 
-  const handleAJAXResponse = (data: any) => {
-    if (data.success) {
-      // Efeito sonoro de caixa registradora (playCash)
-      if (typeof window !== "undefined" && (window as any).AscendSFX) {
-        const sfx = (window as any).AscendSFX;
-        if (typeof sfx.playCash === "function") {
-          sfx.playCash();
-        } else {
-          sfx.playClick();
-        }
-      }
-
-      setSaldoTotal(data.saldo_total);
-      setEntradasMes(data.entradas_mes);
-      setSaidasMes(data.saidas_mes);
-
-      // Criar nova transação na lista local
-      const newTx: Transaction = {
-        id: Math.random(), // id temporário, mas o reload recarrega correto
-        user_id: 1,
-        valor: data.valor,
-        descricao: data.descricao,
-        categoria: data.categoria,
-        data: new Date(), // data atual
-      };
-
-      setTransactions((prev) => [newTx, ...prev]);
-
-      if (data.nivel_subiu) {
-        alert(`Subiu de Nível! Nível ${data.usuario_nivel} (+ ${data.xp_ganho} XP)`);
-      }
-    } else {
-      alert("Erro ao gravar: " + data.message);
-    }
-  };
-
   // Enviar Log Rápido
   const handleQuickLog = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -166,13 +142,25 @@ export const FinancasClientInitial: React.FC<FinancasClientInitialProps> = ({
     const formData = new FormData(form);
 
     try {
-      const res = await fetch("/financas/adicionar", {
-        method: "POST",
-        body: formData,
-      });
-      const data = await res.json();
-      handleAJAXResponse(data);
-      form.reset();
+      const res = await addTransactionAction(formData);
+      if (res.success) {
+        // Efeito sonoro de caixa registradora (playCash)
+        if (typeof window !== "undefined" && (window as any).AscendSFX) {
+          const sfx = (window as any).AscendSFX;
+          if (typeof sfx.playCash === "function") {
+            sfx.playCash();
+          } else {
+            sfx.playClick();
+          }
+        }
+
+        if (res.nivelSubiu) {
+          triggerLevelUp(res.nivelAnterior!, res.nivelNovo!);
+        }
+        form.reset();
+      } else {
+        alert("Erro ao gravar: " + res.message);
+      }
     } catch (err: any) {
       alert("Erro ao conectar: " + err.message);
     }
@@ -185,16 +173,28 @@ export const FinancasClientInitial: React.FC<FinancasClientInitialProps> = ({
     const formData = new FormData(form);
 
     try {
-      const res = await fetch("/financas/adicionar", {
-        method: "POST",
-        body: formData,
-      });
-      const data = await res.json();
-      handleAJAXResponse(data);
-      form.reset();
-      const dataInput = document.getElementById("manual-data") as HTMLInputElement;
-      if (dataInput) {
-        dataInput.value = new Date().toISOString().split("T")[0];
+      const res = await addTransactionAction(formData);
+      if (res.success) {
+        // Efeito sonoro de caixa registradora (playCash)
+        if (typeof window !== "undefined" && (window as any).AscendSFX) {
+          const sfx = (window as any).AscendSFX;
+          if (typeof sfx.playCash === "function") {
+            sfx.playCash();
+          } else {
+            sfx.playClick();
+          }
+        }
+
+        if (res.nivelSubiu) {
+          triggerLevelUp(res.nivelAnterior!, res.nivelNovo!);
+        }
+        form.reset();
+        const dataInput = document.getElementById("manual-data") as HTMLInputElement;
+        if (dataInput) {
+          dataInput.value = new Date().toISOString().split("T")[0];
+        }
+      } else {
+        alert("Erro ao gravar: " + res.message);
       }
     } catch (err: any) {
       alert("Erro ao conectar: " + err.message);
@@ -432,15 +432,21 @@ export const FinancasClientInitial: React.FC<FinancasClientInitialProps> = ({
                               <strong className={isPositive ? "text-success" : "text-danger"}>
                                 {isPositive ? "+" : ""}R$ {Math.abs(t.valor ?? 0).toFixed(2)}
                               </strong>
-                              <form
-                                action={`/financas/deletar/${t.id}`}
-                                method="POST"
-                                style={{ display: "inline" }}
+                              <button
+                                type="button"
+                                className="btn btn-link text-danger p-0 delete-btn"
+                                style={{ minWidth: "48px", minHeight: "48px", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                                onClick={async () => {
+                                  if (confirm(`Deseja realmente deletar a transação "${t.descricao}"?`)) {
+                                    const res = await deleteTransactionAction(t.id);
+                                    if (!res.success) {
+                                      alert("Erro ao deletar: " + res.message);
+                                    }
+                                  }
+                                }}
                               >
-                                <button type="submit" className="btn btn-link text-danger p-0">
-                                  <span className="bi bi-trash" />
-                                </button>
-                              </form>
+                                <span className="bi bi-trash" />
+                              </button>
                             </div>
                           </td>
                         </tr>

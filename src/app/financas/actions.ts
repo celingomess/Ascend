@@ -1,6 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
+'use server';
 
+import prisma from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
+
+// Função de parsing do comando de log rápido
 function parseQuickLog(text: string) {
   text = text.trim();
   const parts = text.split(" ");
@@ -78,9 +81,8 @@ function parseQuickLog(text: string) {
   return { val, desc, cat: category };
 }
 
-export async function POST(req: NextRequest) {
+export async function addTransactionAction(formData: FormData) {
   try {
-    const formData = await req.formData();
     let val = 0;
     let desc = "";
     let cat = "Outros";
@@ -89,13 +91,10 @@ export async function POST(req: NextRequest) {
       const quickText = (formData.get("quick_log") as string || "").trim();
       const parsed = parseQuickLog(quickText);
       if (parsed.val === null || parsed.desc === null || parsed.cat === null) {
-        return NextResponse.json(
-          {
-            success: false,
-            message: "Formato de log rápido inválido. Use ex: '-32 Almoço' ou '+500 Pix'",
-          },
-          { status: 400 }
-        );
+        return {
+          success: false,
+          message: "Formato de log rápido inválido. Use ex: '-32 Almoço' ou '+500 Pix'",
+        };
       }
       val = parsed.val;
       desc = parsed.desc;
@@ -114,7 +113,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (!desc) {
-      return NextResponse.json({ success: false, message: "A descrição é obrigatória." }, { status: 400 });
+      return { success: false, message: "A descrição é obrigatória." };
     }
 
     const dataStr = formData.get("data") as string;
@@ -124,7 +123,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Criar transação no banco
-    const transaction = await prisma.financial_transactions.create({
+    await prisma.financial_transactions.create({
       data: {
         user_id: 1,
         valor: val,
@@ -152,18 +151,19 @@ export async function POST(req: NextRequest) {
     // Gamificação: Usuário
     const user = await prisma.users.findUnique({ where: { id: 1 } });
     if (!user) {
-      return NextResponse.json({ success: false, message: "User not found" }, { status: 404 });
+      return { success: false, message: "Usuário padrão não encontrado." };
     }
 
+    const oldLevel = user.nivel ?? 1;
     let novoXp = (user.xp_total ?? 0) + xpGanho;
-    let novoNivel = user.nivel ?? 1;
+    let novoNivel = oldLevel;
     let nivelSubiu = false;
 
     while (novoXp >= novoNivel * 500) {
       novoNivel += 1;
     }
 
-    if (novoNivel > user.nivel!) {
+    if (novoNivel > oldLevel) {
       nivelSubiu = true;
     }
 
@@ -176,47 +176,35 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Recalcular resumos do mês
-    const allTransactions = await prisma.financial_transactions.findMany({
-      where: { user_id: 1 },
-    });
+    // Revalidar a rota de finanças para recarregar todos os dados no Server Component
+    revalidatePath("/financas");
 
-    const saldoTotal = allTransactions.reduce((acc, t) => acc + (t.valor ?? 0), 0);
-    const hoje = new Date();
-    const currentMonth = hoje.getMonth();
-    const currentYear = hoje.getFullYear();
-
-    const transactionsMonth = allTransactions.filter((t) => {
-      if (!t.data) return false;
-      const d = new Date(t.data);
-      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-    });
-
-    const entradasMes = transactionsMonth
-      .filter((t) => (t.valor ?? 0) > 0)
-      .reduce((acc, t) => acc + (t.valor ?? 0), 0);
-    const saidasMes = transactionsMonth
-      .filter((t) => (t.valor ?? 0) < 0)
-      .reduce((acc, t) => acc + (t.valor ?? 0), 0);
-
-    return NextResponse.json({
+    return {
       success: true,
       valor: val,
       descricao: desc,
       categoria: cat,
-      data: `${String(dataT.getDate()).padStart(2, "0")}/${String(dataT.getMonth() + 1).padStart(
-        2,
-        "0"
-      )}/${dataT.getFullYear()}`,
-      saldo_total: saldoTotal,
-      entradas_mes: entradasMes,
-      saidas_mes: Math.abs(saidasMes),
-      xp_ganho: xpGanho,
-      usuario_xp: novoXp,
-      usuario_nivel: novoNivel,
-      nivel_subiu: nivelSubiu,
-    });
+      nivelSubiu,
+      nivelAnterior: oldLevel,
+      nivelNovo: novoNivel,
+      xpGanho,
+    };
   } catch (error: any) {
-    return NextResponse.json({ success: false, message: error.message }, { status: 400 });
+    return { success: false, message: "Erro interno no servidor: " + error.message };
+  }
+}
+
+export async function deleteTransactionAction(id: number) {
+  try {
+    await prisma.financial_transactions.delete({
+      where: { id },
+    });
+
+    // Revalidar a rota de finanças para recarregar todos os dados no Server Component
+    revalidatePath("/financas");
+
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, message: "Erro ao deletar transação: " + error.message };
   }
 }

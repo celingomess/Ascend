@@ -1,24 +1,32 @@
-import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
 
-export default withAuth(
-  function middleware(request: NextRequest) {
-    const url = request.nextUrl;
-    
-    if (url.pathname.startsWith("/_next/static/") && url.searchParams.size > 0) {
+export async function middleware(request: NextRequest) {
+  const url = request.nextUrl;
+
+  // 1. Lógica para recursos estáticos (Webpack Dev Server)
+  if (url.pathname.startsWith("/_next/static/")) {
+    if (url.searchParams.size > 0) {
       const cleanUrl = new URL(url.pathname, request.url);
       return NextResponse.rewrite(cleanUrl);
     }
-
     return NextResponse.next();
-  },
-  {
-    pages: {
-      signIn: "/login",
-    },
   }
-);
+
+  // 2. Proteção de rotas privadas via NextAuth
+  const token = await getToken({
+    req: request,
+    secret: process.env.NEXTAUTH_SECRET || "supersecret-ascend-key-123",
+  });
+
+  if (!token) {
+    const loginUrl = new URL("/login", request.url);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  return NextResponse.next();
+}
 
 export const config = {
   matcher: [

@@ -7,6 +7,34 @@ import { authOptions } from "@/lib/auth";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { updateUserStreak } from "@/lib/streaks";
 
+// Helper para gerar conteúdo com retry automático e fallback de modelos
+async function generateContentWithFallback(ai: any, prompt: string) {
+  const models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-flash-latest"];
+  let lastError = null;
+
+  for (const modelName of models) {
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const model = ai.getGenerativeModel({ model: modelName });
+        const result = await model.generateContent(prompt);
+        return result;
+      } catch (err: any) {
+        lastError = err;
+        console.warn(`[IA Warning] Tentativa ${attempt} com o modelo ${modelName} falhou: ${err.message}`);
+        // Se for erro de indisponibilidade (503) ou alta demanda, espera 1s antes de tentar novamente
+        if (err.status === 503 || err.message.includes("503") || err.message.includes("demand") || err.message.includes("Unavailable")) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+        } else {
+          // Outros erros (ex: 404), passa para o próximo modelo direto
+          break;
+        }
+      }
+    }
+  }
+
+  throw lastError || new Error("Falha na geração de conteúdo da IA após múltiplas tentativas.");
+}
+
 // Helper para extrair JSON de respostas de texto da IA de forma robusta
 function extractJSON(text: string): string {
   const start = text.indexOf("{");
@@ -158,7 +186,7 @@ Retorne os dois formatos estruturados exatamente como:
 ---MARKDOWN_END---
         `.trim();
 
-        const result = await model.generateContent(prompt);
+        const result = await generateContentWithFallback(ai, prompt);
         const text = result.response.text();
 
         const jsonMatch = text.match(/---JSON_START---([\s\S]*?)---JSON_END---/);
@@ -342,7 +370,7 @@ Você deve responder APENAS com um objeto JSON válido (sem markdown, sem blocos
 }
     `.trim();
 
-    const result = await model.generateContent(prompt);
+    const result = await generateContentWithFallback(ai, prompt);
     const rawText = result.response.text().trim();
     const cleanJson = extractJSON(rawText);
     const parsed = JSON.parse(cleanJson);
@@ -403,7 +431,7 @@ Responda ESTRITAMENTE com um objeto JSON válido (sem markdown, sem blocos de c�
 Se o usuário omitir repetições ou séries, use 3 ou 10 como padrão razoável. Se omitir a carga, defina como 0.
       `.trim();
 
-      const result = await model.generateContent(prompt);
+      const result = await generateContentWithFallback(ai, prompt);
       const rawText = result.response.text().trim();
       const cleanJson = extractJSON(rawText);
       aiResponse = JSON.parse(cleanJson);

@@ -2,13 +2,30 @@
    HEALTH & NUTRIÇÃO STYLE SHEET
 =================================== */
 
+/* Glassmorphism Premium Cards */
+.glass-card {
+    background: rgba(10, 18, 12, 0.72) !important;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(212, 175, 55, 0.16) !important;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.45);
+    border-radius: 18px !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+    border-color: rgba(212, 175, 55, 0.32) !important;
+    box-shadow: 0 12px 40px 0 rgba(212, 175, 55, 0.08);
+}
+
+/* Calorias SVG & Concentric Rings */
 .calorie-ring-svg {
     transform: rotate(-90deg);
 }
 
 .ring-bg {
     fill: none;
-    stroke: rgba(255, 255, 255, 0.03);
+    stroke: rgba(255, 255, 255, 0.04);
     stroke-width: 10;
 }
 
@@ -17,31 +34,61 @@
     stroke: var(--gold-soft);
     stroke-width: 10;
     stroke-linecap: round;
-    transition: stroke-dashoffset 0.8s ease-in-out;
+    transition: stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+.ring-macro-bg {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.03);
+    stroke-width: 8;
+}
+
+.ring-macro-active {
+    fill: none;
+    stroke-width: 8;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Macro Dots & Colors */
 .macro-dot {
     display: inline-block;
-    width: 8px;
-    height: 8px;
+    width: 10px;
+    height: 10px;
     border-radius: 50%;
-    margin-right: 6px;
+    margin-right: 8px;
 }
 
 .macro-p {
-    background-color: var(--bs-primary);
+    background-color: var(--gold) !important;
 }
 
 .macro-c {
-    background-color: var(--bs-success);
+    background-color: #2ec4b6 !important;
 }
 
 .macro-f {
-    background-color: var(--bs-warning);
+    background-color: #e76f51 !important;
 }
 
 .blue-text {
     color: #4b88be !important;
+}
+
+/* Pulse Animations */
+.animate-pulse-gold {
+    animation: goldPulse 2s infinite ease-in-out;
+}
+
+@keyframes goldPulse {
+    0%, 100% {
+        box-shadow: 0 0 10px rgba(212, 175, 55, 0.15);
+        border-color: rgba(212, 175, 55, 0.2);
+    }
+    50% {
+        box-shadow: 0 0 25px rgba(212, 175, 55, 0.35);
+        border-color: rgba(212, 175, 55, 0.5);
+    }
 }
 
 .animate-pulse {
@@ -54,35 +101,62 @@
         opacity: 0.8;
     }
     50% {
-        transform: scale(1.15);
+        transform: scale(1.1);
         opacity: 1;
-        text-shadow: 0 0 10px rgba(75, 136, 190, 0.5);
+        text-shadow: 0 0 12px rgba(75, 136, 190, 0.6);
     }
 }
 
 /* Accordion Customizations */
+.accordion-premium .accordion-item {
+    background: rgba(255, 255, 255, 0.02) !important;
+    border: 1px solid rgba(226, 201, 133, 0.12) !important;
+    border-radius: 12px !important;
+    overflow: hidden;
+    transition: all 0.25s ease;
+}
+
+.accordion-premium .accordion-item:hover {
+    border-color: rgba(226, 201, 133, 0.25) !important;
+}
+
 .accordion-premium .accordion-button::after {
     filter: invert(1) sepia(1) saturate(5) hue-rotate(30deg); /* Dourado */
 }
 
 .accordion-premium .accordion-button:not(.collapsed) {
-    background: rgba(226, 201, 133, 0.05) !important;
+    background: rgba(226, 201, 133, 0.04) !important;
     box-shadow: none;
 }
 
 .accordion-premium .accordion-button:focus {
     box-shadow: none;
-    border-color: rgba(226, 201, 133, 0.25);
+    border-color: rgba(226, 201, 133, 0.2);
 }
 
 .table th {
     font-weight: 700;
     letter-spacing: 1px;
     text-transform: uppercase;
+    color: var(--gold-soft) !important;
 }
 
 .btn-xs {
-    padding: 4px 8px;
-    font-size: 0.75rem;
+    padding: 6px 12px;
+    font-size: 0.78rem;
     border-radius: 99px;
+    font-weight: 700;
+}
+
+.btn-ascend-outline {
+    background: transparent;
+    border: 1px solid rgba(212, 175, 55, 0.4);
+    color: var(--gold-soft);
+    transition: all 0.2s ease;
+}
+
+.btn-ascend-outline:hover {
+    background: rgba(212, 175, 55, 0.1);
+    color: white;
+    border-color: var(--gold);
 }

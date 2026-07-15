@@ -72,12 +72,32 @@ export async function generateHealthReportAction(tipo: "SEMANAL" | "MENSAL" | "T
         const ai = new GoogleGenerativeAI(apiKey);
         const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
 
+        // Buscar todos os treinos para resolver nomes de rotina
+        const workouts = await prisma.workouts.findMany({
+          where: { user_id: userId },
+          select: { id: true, nome: true },
+        });
+
+        const logsWorkoutsWithNames = logsWorkouts.map((log) => {
+          const w = workouts.find((x) => x.id === log.workout_id);
+          return {
+            data: log.data_conclusao.toISOString().split("T")[0],
+            treino: w ? w.nome : "Treino",
+          };
+        });
+
+        const loadHistoryFormatted = loadHistory.map((lh) => ({
+          data: lh.data_registro.toISOString().split("T")[0],
+          exercicio: lh.exercise_name,
+          carga: lh.carga,
+        }));
+
         const prompt = tipo === "TREINO" ? `
 Você é o Coach de Musculação com IA do Ascend OS. Analise o histórico de treinos e cargas do usuário nos últimos ${diasAtras} dias:
 - Peso atual: ${pesoAtual} kg
 - Histórico de peso registrado: ${JSON.stringify(logsWeights)}
-- Treinos concluídos: ${JSON.stringify(logsWorkouts)}
-- Cargas progressivas registradas nos exercícios: ${JSON.stringify(loadHistory)}
+- Treinos concluídos: ${JSON.stringify(logsWorkoutsWithNames)}
+- Cargas progressivas registradas nos exercícios: ${JSON.stringify(loadHistoryFormatted)}
 
 Gere um relatório focado em desempenho, musculação e progressão de força em Markdown.
 O relatório deve conter:
@@ -104,7 +124,7 @@ Você é o Personal Coach com IA do Ascend OS. Analise o seguinte histórico fí
 - Peso atual: ${pesoAtual} kg
 - Histórico de peso registrado: ${JSON.stringify(logsWeights)}
 - Histórico de nutrição (calorias, macros, água): ${JSON.stringify(logsNutrition)}
-- Treinos concluídos: ${JSON.stringify(logsWorkouts)}
+- Treinos concluídos: ${JSON.stringify(logsWorkoutsWithNames)}
 
 Gere um relatório de progresso detalhado em Markdown para o usuário.
 O relatório deve conter:

@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import confetti from "canvas-confetti";
 import { useLevelUp } from "./LevelUpContext";
 import Chart from "chart.js/auto";
-import { parseExpressMealAction, parseExpressWorkoutAction } from "@/app/saude/actions";
+import { parseExpressMealAction, parseExpressWorkoutAction, generateHealthReportAction } from "@/app/saude/actions";
 
 import "@/styles/health.css";
 
@@ -41,16 +41,54 @@ interface Nutrition {
   agua_ml: number | null;
 }
 
+interface WeightPoint {
+  id: number;
+  peso: number;
+  dataRegistro: string;
+}
+
+interface NutritionPoint {
+  id: number;
+  caloriasConsumidas: number;
+  caloriasMeta: number;
+  aguaMl: number;
+  data: string;
+}
+
+interface LoadPoint {
+  id: number;
+  carga: number;
+  dataRegistro: string;
+}
+
+interface AIReport {
+  id: number;
+  criadoEm: string;
+  tipo: string;
+  conteudo: string;
+  insights: {
+    pontosFortes: string[];
+    melhorias: string[];
+    previsaoTdee: number;
+  };
+}
+
 interface SaudeClientInitialProps {
   user: {
+    id: number;
     nome: string;
     nivel: number;
     xp_total: number;
+    avatar?: string | null;
     peso?: number | null;
   };
   initialNutrition: Nutrition;
   workouts: Workout[];
   workoutLogs: any[];
+  initialWeights: WeightPoint[];
+  initialNutritions: NutritionPoint[];
+  initialLoadHistory: LoadPoint[];
+  initialReports: AIReport[];
 }
 
 const dbDiasAbrev = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -69,6 +107,10 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
   initialNutrition,
   workouts,
   workoutLogs,
+  initialWeights,
+  initialNutritions,
+  initialLoadHistory,
+  initialReports,
 }) => {
   const [nutrition, setNutrition] = useState<Nutrition>(initialNutrition);
   const [agua, setAgua] = useState<number>(initialNutrition.agua_ml || 0);
@@ -78,6 +120,173 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
 
   const [peso, setPeso] = useState<number | null>(user.peso || null);
   const waterGoal = peso ? Math.round(peso * 35) : 2000;
+
+  // Estados e Memos do Painel de Evolução & Diagnósticos IA
+  const [reports, setReports] = useState<AIReport[]>(initialReports);
+  const [reportType, setReportType] = useState<"SEMANAL" | "MENSAL" | "TREINO">("SEMANAL");
+  const [loadingReport, setLoadingReport] = useState(false);
+  const [statusMsg, setStatusMsg] = useState<string | null>(null);
+
+  // Gerar relatório de evolução por IA
+  const handleGenerateReport = async () => {
+    setLoadingReport(true);
+    setStatusMsg("Analisando registros de saúde, cargas e evolução...");
+    try {
+      const res = await generateHealthReportAction(reportType);
+      if (res.success) {
+        window.location.reload();
+      } else {
+        setStatusMsg("Erro: " + res.message);
+      }
+    } catch (err: any) {
+      setStatusMsg("Erro: " + err.message);
+    } finally {
+      setLoadingReport(false);
+    }
+  };
+
+  const [hoveredPoint, setHoveredPoint] = useState<{
+    x: number;
+    yPeso: number;
+    yCarga: number;
+    label: string;
+    peso: number;
+    volumeCarga: number;
+  } | null>(null);
+
+  // 1. Processar dados para o Gráfico de Linha de Duplo Eixo (últimos 30 dias)
+  const chartData = useMemo(() => {
+    const dataPoints = [];
+    const hoje = new Date();
+    const currentWeight = user.peso || 80;
+    
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(hoje.getDate() - i);
+      const dateStr = d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const dayVal = String(d.getDate()).padStart(2, "0");
+      const compStr = `${year}-${month}-${dayVal}`;
+
+      // Encontrar peso mais próximo registrado
+      const weightRecord = [...initialWeights]
+        .reverse()
+        .find(w => w.dataRegistro.split("T")[0] <= compStr);
+      const pesoVal = weightRecord ? weightRecord.peso : currentWeight;
+
+      // Calcular volume de carga total desse dia
+      const loadForDay = initialLoadHistory
+        .filter(lh => lh.dataRegistro.split("T")[0] === compStr)
+        .reduce((sum, curr) => sum + curr.carga, 0);
+
+      dataPoints.push({
+        label: dateStr,
+        peso: pesoVal,
+        volumeCarga: loadForDay || 0,
+      });
+    }
+    return dataPoints;
+  }, [initialWeights, initialLoadHistory, user.peso]);
+
+  // Coordenadas SVG e Normalizações
+  const svgPaths = useMemo(() => {
+    const width = 600;
+    const height = 250;
+    const padding = 40;
+    const chartWidth = width - padding * 2;
+    const chartHeight = height - padding * 2;
+    const currentWeight = user.peso || 80;
+
+    const pesos = chartData.map(d => d.peso);
+    const cargas = chartData.map(d => d.volumeCarga);
+
+    const minPeso = Math.min(...pesos, currentWeight - 5) * 0.98;
+    const maxPeso = Math.max(...pesos, currentWeight + 5) * 1.02;
+    const minCarga = Math.min(...cargas, 10) * 0.9;
+    const maxCarga = Math.max(...cargas, 100) * 1.1;
+
+    const getX = (index: number) => padding + (index / (chartData.length - 1)) * chartWidth;
+    const getY = (value: number, min: number, max: number) => {
+      if (max === min) return chartHeight / 2 + padding;
+      return chartHeight + padding - ((value - min) / (max - min)) * chartHeight;
+    };
+
+    let pesoPoints = "";
+    let cargaPoints = "";
+
+    chartData.forEach((pt, i) => {
+      const x = getX(i);
+      const yPeso = getY(pt.peso, minPeso, maxPeso);
+      const yCarga = getY(pt.volumeCarga, minCarga, maxCarga);
+
+      if (i === 0) {
+        pesoPoints = `M ${x} ${yPeso}`;
+        cargaPoints = `M ${x} ${yCarga}`;
+      } else {
+        pesoPoints += ` L ${x} ${yPeso}`;
+        cargaPoints += ` L ${x} ${yCarga}`;
+      }
+    });
+
+    let pesoFillPoints = "";
+    let cargaFillPoints = "";
+
+    if (chartData.length > 0) {
+      const x0 = getX(0);
+      const xN = getX(chartData.length - 1);
+      const baseY = chartHeight + padding;
+
+      const firstY = getY(chartData[0].peso, minPeso, maxPeso);
+      pesoFillPoints = `M ${x0} ${baseY} L ${x0} ${firstY} ${pesoPoints.substring(pesoPoints.indexOf(" L"))} L ${xN} ${baseY} Z`;
+
+      const firstCargaY = getY(chartData[0].volumeCarga, minCarga, maxCarga);
+      cargaFillPoints = `M ${x0} ${baseY} L ${x0} ${firstCargaY} ${cargaPoints.substring(cargaPoints.indexOf(" L"))} L ${xN} ${baseY} Z`;
+    }
+
+    return { pesoPoints, cargaPoints, pesoFillPoints, cargaFillPoints, minPeso, maxPeso, minCarga, maxCarga, getX, getY, chartWidth, chartHeight, padding };
+  }, [chartData, user.peso]);
+
+  // 2. Processar dados para o Mapa de Calor (últimos 180 dias)
+  const heatmapData = useMemo(() => {
+    const days = [];
+    const hoje = new Date();
+    
+    // Alinha para começar num domingo para organizar por semanas
+    const startOffset = hoje.getDay();
+    const totalDays = 168 + startOffset; // 24 semanas completas
+
+    for (let i = totalDays - 1; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(hoje.getDate() - i);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const dayVal = String(d.getDate()).padStart(2, "0");
+      const dateKey = `${year}-${month}-${dayVal}`;
+
+      // Critério 1: Bateu macros (calorias)
+      const nutritionRec = initialNutritions.find(n => n.data.split("T")[0] === dateKey);
+      const bateuCalorias = nutritionRec ? (nutritionRec.caloriasConsumidas >= nutritionRec.caloriasMeta) : false;
+
+      // Critério 2: Bateu água (>= 2 litros)
+      const bateuAgua = nutritionRec ? (nutritionRec.aguaMl >= 2000) : false;
+
+      // Critério 3: Treinou
+      const treinou = workoutLogs.some(wl => wl.data_conclusao.split("T")[0] === dateKey);
+
+      let score = 0;
+      if (bateuCalorias) score += 1;
+      if (bateuAgua) score += 1;
+      if (treinou) score += 1;
+
+      days.push({
+        date: d.toLocaleDateString("pt-BR"),
+        score,
+        details: `${treinou ? "✓ Treinou" : "✗ Não Treinou"} | ${bateuCalorias ? "✓ Macros Bateu" : "✗ Sem Macros"} | ${bateuAgua ? "✓ Água OK" : "✗ Pouca Água"}`,
+      });
+    }
+    return days;
+  }, [initialNutritions, workoutLogs]);
 
   // Estados do Gráfico de Cargas
   const [historyModalExercise, setHistoryModalExercise] = useState<Exercise | null>(null);
@@ -693,26 +902,19 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
   // Auxiliares do Anel de Progresso
   const caloriasConsumidas = nutrition.calorias_consumidas ?? 0;
   const caloriasMeta = nutrition.calorias_meta ?? 2000;
-  const porcentagemCalorias = Math.min(caloriasConsumidas / caloriasMeta, 1);
-  const strokeOffset = 471.2 - 471.2 * porcentagemCalorias;
+  const currentPeso = peso || user.peso || 80;
 
   return (
     <div className="container-fluid py-4">
       {/* Cabeçalho */}
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
-          <span className="badge-old mb-2">
-            <i className="bi bi-heart-pulse-fill"></i> Performance Física
+          <span className="badge-old mb-2" style={{ textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "1px" }}>
+            <i className="bi bi-heart-pulse-fill"></i> Central de Performance & Saúde
           </span>
-          <h2 className="ascend-title mb-0">Saúde & Nutrição</h2>
+          <h2 className="ascend-title mb-0" style={{ fontSize: "1.8rem" }}>Dashboard Geral</h2>
         </div>
         <div className="d-flex gap-2">
-          <Link
-            href="/saude/evolucao"
-            className="btn btn-outline-secondary border-secondary text-white d-flex align-items-center gap-2"
-          >
-            <i className="bi bi-graph-up"></i> Evolução & IA
-          </Link>
           <button
             type="button"
             className="btn btn-ascend"
@@ -723,14 +925,321 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
         </div>
       </div>
 
-      {/* Layout Dividido */}
+      {/* Grid Central */}
       <div className="row g-4 fade-in-up">
-        {/* Painel de Nutrição & Hidratação (Esquerda) */}
+        {/* COLUNA ESQUERDA (Evolução & IA) */}
+        <div className="col-lg-7 col-md-12">
+          
+          {/* Gráfico SVG de Duplo Eixo */}
+          <div className="glass-card p-4 mb-4">
+            <div className="d-flex justify-content-between align-items-center mb-3">
+              <div>
+                <h3 className="ascend-title mb-0" style={{ fontSize: "1.2rem", color: "var(--cream)" }}>
+                  Evolução Temporal
+                </h3>
+                <span className="text-muted small">Evolução do seu Peso Corporal vs. Carga de Musculação</span>
+              </div>
+              <div className="d-flex gap-3 text-end" style={{ fontSize: "0.75rem" }}>
+                <div>
+                  <span className="d-inline-block rounded-circle me-1" style={{ width: "8px", height: "8px", background: "var(--gold)" }}></span>
+                  <span className="text-muted">Carga total (kg)</span>
+                </div>
+                <div>
+                  <span className="d-inline-block rounded-circle me-1" style={{ width: "8px", height: "8px", background: "#4b88be" }}></span>
+                  <span className="text-muted">Peso (kg)</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Render do Gráfico SVG */}
+            <div className="position-relative" style={{ height: "250px" }}>
+              <svg
+                width="100%"
+                height="100%"
+                viewBox="0 0 600 250"
+                preserveAspectRatio="none"
+                style={{ overflow: "visible" }}
+                onMouseMove={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const mouseX = e.clientX - rect.left;
+                  const ratio = mouseX / rect.width;
+                  const targetX = ratio * 600;
+
+                  // Achar ponto mais próximo em chartData
+                  const stepWidth = (600 - svgPaths.padding * 2) / (chartData.length - 1);
+                  let idx = Math.round((targetX - svgPaths.padding) / stepWidth);
+                  idx = Math.max(0, Math.min(chartData.length - 1, idx));
+
+                  const pt = chartData[idx];
+                  const x = svgPaths.getX(idx);
+                  const yPeso = svgPaths.getY(pt.peso, svgPaths.minPeso, svgPaths.maxPeso);
+                  const yCarga = svgPaths.getY(pt.volumeCarga, svgPaths.minCarga, svgPaths.maxCarga);
+
+                  setHoveredPoint({
+                    x,
+                    yPeso,
+                    yCarga,
+                    label: pt.label,
+                    peso: pt.peso,
+                    volumeCarga: pt.volumeCarga,
+                  });
+                }}
+                onMouseLeave={() => setHoveredPoint(null)}
+              >
+                {/* Definições de Gradientes */}
+                <defs>
+                  <linearGradient id="gradientPeso" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#4b88be" stopOpacity="0.25" />
+                    <stop offset="100%" stopColor="#4b88be" stopOpacity="0.0" />
+                  </linearGradient>
+                  <linearGradient id="gradientCarga" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="var(--gold)" stopOpacity="0.25" />
+                    <stop offset="100%" stopColor="var(--gold)" stopOpacity="0.0" />
+                  </linearGradient>
+                </defs>
+
+                {/* Grade de fundo horizontal */}
+                <line x1={svgPaths.padding} y1={svgPaths.padding} x2={600 - svgPaths.padding} y2={svgPaths.padding} stroke="rgba(255,255,255,0.04)" strokeDasharray="3,3" />
+                <line x1={svgPaths.padding} y1={svgPaths.padding + svgPaths.chartHeight / 2} x2={600 - svgPaths.padding} y2={svgPaths.padding + svgPaths.chartHeight / 2} stroke="rgba(255,255,255,0.04)" strokeDasharray="3,3" />
+                <line x1={svgPaths.padding} y1={svgPaths.padding + svgPaths.chartHeight} x2={600 - svgPaths.padding} y2={svgPaths.padding + svgPaths.chartHeight} stroke="rgba(255,255,255,0.04)" strokeDasharray="3,3" />
+
+                {/* Áreas com Gradiente */}
+                {svgPaths.pesoFillPoints && <path d={svgPaths.pesoFillPoints} fill="url(#gradientPeso)" />}
+                {svgPaths.cargaFillPoints && <path d={svgPaths.cargaFillPoints} fill="url(#gradientCarga)" />}
+
+                {/* Linhas Principais */}
+                {svgPaths.pesoPoints && <path d={svgPaths.pesoPoints} fill="none" stroke="#4b88be" strokeWidth="2.5" />}
+                {svgPaths.cargaPoints && <path d={svgPaths.cargaPoints} fill="none" stroke="var(--gold)" strokeWidth="2.5" />}
+
+                {/* Linha vertical e pontos em foco (Hover) */}
+                {hoveredPoint && (
+                  <>
+                    <line
+                      x1={hoveredPoint.x}
+                      y1={svgPaths.padding}
+                      x2={hoveredPoint.x}
+                      y2={svgPaths.padding + svgPaths.chartHeight}
+                      stroke="rgba(255,255,255,0.15)"
+                      strokeDasharray="4,4"
+                    />
+                    <circle cx={hoveredPoint.x} cy={hoveredPoint.yPeso} r="6" fill="#4b88be" stroke="#fff" strokeWidth="1.5" />
+                    <circle cx={hoveredPoint.x} cy={hoveredPoint.yCarga} r="6" fill="var(--gold)" stroke="#fff" strokeWidth="1.5" />
+                  </>
+                )}
+              </svg>
+
+              {/* Tooltip flutuante dinâmico */}
+              {hoveredPoint && (
+                <div
+                  className="position-absolute p-2.5 rounded shadow text-white border"
+                  style={{
+                    left: `${(hoveredPoint.x / 600) * 100}%`,
+                    top: "10%",
+                    transform: "translateX(-50%)",
+                    background: "rgba(10, 18, 12, 0.9)",
+                    borderColor: "rgba(212, 175, 55, 0.3)",
+                    fontSize: "0.75rem",
+                    zIndex: 10,
+                    pointerEvents: "none",
+                    minWidth: "125px",
+                  }}
+                >
+                  <strong className="d-block text-warning text-center border-bottom border-secondary pb-1 mb-1">
+                    {hoveredPoint.label}
+                  </strong>
+                  <div className="d-flex justify-content-between gap-3">
+                    <span className="text-muted">Peso:</span>
+                    <span className="fw-bold">{hoveredPoint.peso} kg</span>
+                  </div>
+                  <div className="d-flex justify-content-between gap-3">
+                    <span className="text-muted">Volume:</span>
+                    <span className="fw-bold text-warning">{hoveredPoint.volumeCarga} kg</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Mapa de Consistência */}
+          <div className="glass-card p-4 mb-4">
+            <h3 className="ascend-title mb-1" style={{ fontSize: "1.2rem", color: "var(--cream)" }}>
+              Mapa de Consistência (180 Dias)
+            </h3>
+            <p className="text-muted small mb-3">Sua assiduidade de hábitos de treino, água e macros diários.</p>
+
+            <div className="d-flex flex-column align-items-center">
+              {/* Heatmap Grid */}
+              <div
+                className="d-flex flex-wrap gap-1 justify-content-start w-100 overflow-auto py-1"
+                style={{ maxHeight: "160px" }}
+              >
+                {heatmapData.map((day, idx) => {
+                  let bgColor = "rgba(255,255,255,0.03)";
+                  let borderStyle = "1px solid rgba(255,255,255,0.05)";
+
+                  if (day.score === 1) {
+                    bgColor = "rgba(212, 175, 55, 0.2)";
+                    borderStyle = "1px solid rgba(212, 175, 55, 0.15)";
+                  } else if (day.score === 2) {
+                    bgColor = "rgba(212, 175, 55, 0.45)";
+                    borderStyle = "1px solid rgba(212, 175, 55, 0.35)";
+                  } else if (day.score === 3) {
+                    bgColor = "rgba(212, 175, 55, 0.85)";
+                    borderStyle = "1px solid rgba(212, 175, 55, 0.75)";
+                  }
+
+                  return (
+                    <div
+                      key={idx}
+                      className="rounded-1 position-relative"
+                      style={{
+                        width: "12px",
+                        height: "12px",
+                        background: bgColor,
+                        border: borderStyle,
+                        cursor: "pointer",
+                      }}
+                      title={`${day.date} - ${day.details}`}
+                    />
+                  );
+                })}
+              </div>
+
+              {/* Legenda do Mapa */}
+              <div className="d-flex justify-content-between align-items-center w-100 mt-3 text-muted small" style={{ fontSize: "0.72rem" }}>
+                <span>Menos consistente</span>
+                <div className="d-flex gap-1 align-items-center">
+                  <div className="rounded-1" style={{ width: "10px", height: "10px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}></div>
+                  <div className="rounded-1" style={{ width: "10px", height: "10px", background: "rgba(212, 175, 55, 0.2)" }}></div>
+                  <div className="rounded-1" style={{ width: "10px", height: "10px", background: "rgba(212, 175, 55, 0.45)" }}></div>
+                  <div className="rounded-1" style={{ width: "10px", height: "10px", background: "rgba(212, 175, 55, 0.85)" }}></div>
+                </div>
+                <span>Mais consistente</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Coach de IA / Diagnóstico */}
+          <div className="glass-card p-4">
+            <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+              <div>
+                <h3 className="ascend-title mb-0" style={{ fontSize: "1.2rem", color: "var(--cream)" }}>
+                  Diagnóstico IA & Planejamento
+                </h3>
+                <span className="text-muted small">Crie análises evolutivas automáticas sobre seus treinos e saúde</span>
+              </div>
+              <div className="d-flex gap-2">
+                <select
+                  className="form-select bg-transparent text-white border-secondary form-select-sm"
+                  style={{ width: "130px", fontSize: "0.8rem" }}
+                  value={reportType}
+                  onChange={(e) => setReportType(e.target.value as any)}
+                  disabled={loadingReport}
+                >
+                  <option value="SEMANAL" className="bg-dark text-white">Semanal</option>
+                  <option value="MENSAL" className="bg-dark text-white">Mensal</option>
+                  <option value="TREINO" className="bg-dark text-white">Musculação</option>
+                </select>
+                <button
+                  className="btn btn-sm btn-ascend"
+                  onClick={handleGenerateReport}
+                  disabled={loadingReport}
+                >
+                  {loadingReport ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-1.5" />
+                      Analisando...
+                    </>
+                  ) : (
+                    <>
+                      <i className="bi bi-cpu me-1"></i> Diagnóstico
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {statusMsg && (
+              <div className="alert alert-info py-2 px-3 small border-0 text-white-50 mb-3" style={{ background: "rgba(226,201,133,0.05)" }}>
+                {statusMsg}
+              </div>
+            )}
+
+            {/* Histórico de Relatórios */}
+            {reports.length === 0 ? (
+              <div className="text-center py-4 border rounded" style={{ border: "1px dashed rgba(226,201,133,0.1) !important" }}>
+                <span className="bi bi-chat-left-dots text-muted display-6 d-block mb-2" />
+                <span className="text-muted small">Você ainda não gerou diagnósticos de IA. Selecione o período acima e clique em Diagnóstico!</span>
+              </div>
+            ) : (
+              <div className="accordion accordion-premium" id="accordionReports">
+                {reports.map((rep, idx) => (
+                  <div className="accordion-item mb-2" key={rep.id}>
+                    <h2 className="accordion-header">
+                      <button
+                        className="accordion-button collapsed px-3 py-2 text-white bg-transparent small"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target={`#rep-collapse-${rep.id}`}
+                        style={{ fontSize: "0.85rem" }}
+                      >
+                        <div className="d-flex justify-content-between align-items-center w-100 pe-3">
+                          <span>
+                            <i className="bi bi-calendar-event me-2 text-warning"></i>
+                            Relatório {rep.tipo} - {new Date(rep.criadoEm).toLocaleDateString("pt-BR")}
+                          </span>
+                          {rep.insights?.previsaoTdee && (
+                            <span className="badge bg-secondary text-warning-50 small">
+                              Est. TDEE: {rep.insights.previsaoTdee} kcal
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                    </h2>
+                    <div id={`rep-collapse-${rep.id}`} className="accordion-collapse collapse" data-bs-parent="#accordionReports">
+                      <div className="accordion-body p-3 border-top" style={{ borderColor: "rgba(226,201,133,0.1)" }}>
+                        <div className="text-muted small mb-3" style={{ whiteSpace: "pre-wrap", lineHeight: "1.5", fontSize: "0.85rem" }}>
+                          {rep.conteudo}
+                        </div>
+
+                        {/* Insights rápidos formatados */}
+                        {rep.insights && (
+                          <div className="row g-2 mt-2 pt-2 border-top border-secondary">
+                            <div className="col-md-6">
+                              <span className="d-block text-success small fw-bold mb-1">✓ Pontos Fortes</span>
+                              <ul className="ps-3 mb-0 text-muted small" style={{ fontSize: "0.78rem" }}>
+                                {rep.insights.pontosFortes?.map((pt, i) => (
+                                  <li key={i}>{pt}</li>
+                                ))}
+                              </ul>
+                            </div>
+                            <div className="col-md-6">
+                              <span className="d-block text-warning small fw-bold mb-1">⚠ Pontos de Melhoria</span>
+                              <ul className="ps-3 mb-0 text-muted small" style={{ fontSize: "0.78rem" }}>
+                                {rep.insights.melhorias?.map((pt, i) => (
+                                  <li key={i}>{pt}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* COLUNA DIREITA (Monitoramento Diário e Treinos) */}
         <div className="col-lg-5 col-md-12">
-          <div className="ascend-card p-4 h-100">
-            <div className="d-flex justify-content-between align-items-center mb-4">
-              <h3 className="ascend-title mb-0" style={{ fontSize: "1.3rem" }}>
-                Foco Nutricional
+          
+          {/* Foco Nutricional com Concentric SVG Activity Rings */}
+          <div className="glass-card p-4 mb-4">
+            <div className="d-flex justify-content-between align-items-center mb-3">
+              <h3 className="ascend-title mb-0" style={{ fontSize: "1.2rem", color: "var(--cream)" }}>
+                Ingestão Diária
               </h3>
               <button
                 className="btn btn-sm btn-ascend-outline"
@@ -740,397 +1249,328 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
               </button>
             </div>
 
-            {/* Anéis SVG de Calorias */}
+            {/* Concentric rings SVG display */}
             <div className="d-flex align-items-center justify-content-center gap-4 flex-wrap mb-4">
               <div
                 className="position-relative d-flex align-items-center justify-content-center"
-                style={{ width: "180px", height: "180px" }}
+                style={{ width: "160px", height: "160px" }}
               >
-                <svg className="calorie-ring-svg" width="180" height="180" viewBox="0 0 180 180">
-                  <circle className="ring-bg" cx="90" cy="90" r="75" />
+                <svg className="calorie-ring-svg" width="160" height="160" viewBox="0 0 160 160">
+                  {/* Circle 1: Calories (r=65, cx=80, cy=80) -> circumference = 408.4 */}
+                  <circle className="ring-macro-bg" cx="80" cy="80" r="65" />
                   <circle
-                    className="ring-active"
-                    cx="90"
-                    cy="90"
-                    r="75"
+                    className="ring-macro-active"
+                    cx="80"
+                    cy="80"
+                    r="65"
+                    stroke="var(--gold-soft)"
                     style={{
-                      strokeDasharray: "471.2",
-                      strokeDashoffset: strokeOffset,
+                      strokeDasharray: "408.4",
+                      strokeDashoffset: 408.4 - 408.4 * Math.min((nutrition.calorias_consumidas || 0) / (nutrition.calorias_meta || 2000), 1),
+                    }}
+                  />
+                  
+                  {/* Circle 2: Protein (r=51, cx=80, cy=80) -> circumference = 320.4 */}
+                  <circle className="ring-macro-bg" cx="80" cy="80" r="51" />
+                  <circle
+                    className="ring-macro-active"
+                    cx="80"
+                    cy="80"
+                    r="51"
+                    stroke="#2ec4b6"
+                    style={{
+                      strokeDasharray: "320.4",
+                      strokeDashoffset: 320.4 - 320.4 * Math.min((nutrition.proteina || 0) / (Math.round((currentPeso || 80) * 2) || 160), 1),
+                    }}
+                  />
+
+                  {/* Circle 3: Carbs (r=37, cx=80, cy=80) -> circumference = 232.5 */}
+                  <circle className="ring-macro-bg" cx="80" cy="80" r="37" />
+                  <circle
+                    className="ring-macro-active"
+                    cx="80"
+                    cy="80"
+                    r="37"
+                    stroke="#4b88be"
+                    style={{
+                      strokeDasharray: "232.5",
+                      strokeDashoffset: 232.5 - 232.5 * Math.min((nutrition.carboidrato || 0) / (Math.round((currentPeso || 80) * 3) || 240), 1),
+                    }}
+                  />
+
+                  {/* Circle 4: Fat (r=23, cx=80, cy=80) -> circumference = 144.5 */}
+                  <circle className="ring-macro-bg" cx="80" cy="80" r="23" />
+                  <circle
+                    className="ring-macro-active"
+                    cx="80"
+                    cy="80"
+                    r="23"
+                    stroke="#e76f51"
+                    style={{
+                      strokeDasharray: "144.5",
+                      strokeDashoffset: 144.5 - 144.5 * Math.min((nutrition.gordura || 0) / (Math.round((currentPeso || 80) * 0.8) || 64), 1),
                     }}
                   />
                 </svg>
+
+                {/* Display central de calorias */}
                 <div
                   className="text-center position-absolute"
                   style={{ top: "50%", left: "50%", transform: "translate(-50%, -50%)" }}
                 >
-                  <span
-                    className="d-block text-muted small"
-                    style={{ fontSize: "0.65rem", letterSpacing: "1px" }}
-                  >
-                    CONSUMIDO
-                  </span>
-                  <strong className="d-block fs-3 gold-text" id="lbl-calorias-consumidas">
-                    {caloriasConsumidas}
+                  <strong className="d-block gold-text" style={{ fontSize: "1.1rem" }}>
+                    {nutrition.calorias_consumidas || 0}
                   </strong>
-                  <span className="d-block text-muted small" style={{ fontSize: "0.65rem" }}>
-                    de <span id="lbl-calorias-meta">{caloriasMeta}</span> kcal
+                  <span className="text-muted" style={{ fontSize: "0.62rem" }}>
+                    / {nutrition.calorias_meta || 2000} kcal
                   </span>
                 </div>
               </div>
 
-              {/* Progresso dos Macros */}
-              <div className="flex-grow-1" style={{ minWidth: "160px" }}>
+              {/* Legenda dos Macros com porcentagens e cores */}
+              <div className="flex-grow-1" style={{ minWidth: "150px" }}>
                 {/* Proteína */}
-                <div className="mb-3">
-                  <div className="d-flex justify-content-between mb-1" style={{ fontSize: "0.8rem" }}>
+                <div className="mb-2">
+                  <div className="d-flex justify-content-between mb-0.5" style={{ fontSize: "0.78rem" }}>
                     <span className="text-muted">
-                      <span className="macro-dot macro-p"></span> Proteínas
+                      <span className="macro-dot" style={{ background: "#2ec4b6" }} />
+                      Proteínas
                     </span>
-                    <strong>
-                      <span id="lbl-macro-p">{nutrition.proteina ?? 0}</span>g
-                    </strong>
+                    <strong>{nutrition.proteina || 0}g / {Math.round((currentPeso || 80) * 2) || 160}g</strong>
                   </div>
-                  <div
-                    className="progress"
-                    style={{ height: "6px", background: "rgba(255,255,255,0.05)", borderRadius: "99px" }}
-                  >
-                    <div
-                      className="progress-bar bg-primary"
-                      id="bar-macro-p"
-                      style={{
-                        width: `${(((nutrition.proteina ?? 0) * 4) / caloriasMeta) * 100}%`,
-                        borderRadius: "99px",
-                      }}
-                    ></div>
+                  <div className="progress" style={{ height: "4px", background: "rgba(255,255,255,0.03)" }}>
+                    <div className="progress-bar" style={{ background: "#2ec4b6", width: `${Math.min(((nutrition.proteina || 0) / (Math.round((currentPeso || 80) * 2) || 160)) * 100, 100)}%` }}></div>
                   </div>
                 </div>
 
-                {/* Carboidrato */}
-                <div className="mb-3">
-                  <div className="d-flex justify-content-between mb-1" style={{ fontSize: "0.8rem" }}>
+                {/* Carboidratos */}
+                <div className="mb-2">
+                  <div className="d-flex justify-content-between mb-0.5" style={{ fontSize: "0.78rem" }}>
                     <span className="text-muted">
-                      <span className="macro-dot macro-c"></span> Carboidratos
+                      <span className="macro-dot" style={{ background: "#4b88be" }} />
+                      Carbos
                     </span>
-                    <strong>
-                      <span id="lbl-macro-c">{nutrition.carboidrato ?? 0}</span>g
-                    </strong>
+                    <strong>{nutrition.carboidrato || 0}g / {Math.round((currentPeso || 80) * 3) || 240}g</strong>
                   </div>
-                  <div
-                    className="progress"
-                    style={{ height: "6px", background: "rgba(255,255,255,0.05)", borderRadius: "99px" }}
-                  >
-                    <div
-                      className="progress-bar bg-success"
-                      id="bar-macro-c"
-                      style={{
-                        width: `${(((nutrition.carboidrato ?? 0) * 4) / caloriasMeta) * 100}%`,
-                        borderRadius: "99px",
-                      }}
-                    ></div>
+                  <div className="progress" style={{ height: "4px", background: "rgba(255,255,255,0.03)" }}>
+                    <div className="progress-bar" style={{ background: "#4b88be", width: `${Math.min(((nutrition.carboidrato || 0) / (Math.round((currentPeso || 80) * 3) || 240)) * 100, 100)}%` }}></div>
                   </div>
                 </div>
 
-                {/* Gordura */}
+                {/* Gorduras */}
                 <div>
-                  <div className="d-flex justify-content-between mb-1" style={{ fontSize: "0.8rem" }}>
+                  <div className="d-flex justify-content-between mb-0.5" style={{ fontSize: "0.78rem" }}>
                     <span className="text-muted">
-                      <span className="macro-dot macro-f"></span> Gorduras
+                      <span className="macro-dot" style={{ background: "#e76f51" }} />
+                      Gorduras
                     </span>
-                    <strong>
-                      <span id="lbl-macro-f">{nutrition.gordura ?? 0}</span>g
-                    </strong>
+                    <strong>{nutrition.gordura || 0}g / {Math.round((currentPeso || 80) * 0.8) || 64}g</strong>
                   </div>
-                  <div
-                    className="progress"
-                    style={{ height: "6px", background: "rgba(255,255,255,0.05)", borderRadius: "99px" }}
-                  >
-                    <div
-                      className="progress-bar bg-warning"
-                      id="bar-macro-f"
-                      style={{
-                        width: `${(((nutrition.gordura ?? 0) * 9) / caloriasMeta) * 100}%`,
-                        borderRadius: "99px",
-                      }}
-                    ></div>
+                  <div className="progress" style={{ height: "4px", background: "rgba(255,255,255,0.03)" }}>
+                    <div className="progress-bar" style={{ background: "#e76f51", width: `${Math.min(((nutrition.gordura || 0) / (Math.round((currentPeso || 80) * 0.8) || 64)) * 100, 100)}%` }}></div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Formulário Rápido de Macros */}
-            <form
-              id="form-add-nutrition"
-              onSubmit={handleQuickAdd}
-              className="row g-2 mb-4 p-3 rounded"
-              style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(226,201,133,0.1)" }}
-            >
-              <div className="col-12 mb-1 d-flex align-items-center justify-content-between">
-                <span
-                  className="text-muted small"
-                  style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase" }}
+            {/* Quick logger form (Express com IA) */}
+            <div className="pt-3 border-top border-secondary">
+              <span className="d-block text-muted small fw-bold mb-2" style={{ fontSize: "0.7rem", letterSpacing: "0.5px" }}>
+                REGISTRO RÁPIDO COM IA
+              </span>
+              <div className="input-group mb-2">
+                <input
+                  type="text"
+                  className="form-control bg-transparent text-white border-secondary small"
+                  placeholder="Ex: 3 ovos mexidos com 2 fatias de pão integral"
+                  value={expressInput}
+                  onChange={(e) => setExpressInput(e.target.value)}
+                  disabled={isExpressLoading}
+                  style={{ fontSize: "0.85rem" }}
+                />
+                <button
+                  className="btn btn-outline-warning border-secondary text-warning"
+                  type="button"
+                  onClick={handleExpressMealParse}
+                  disabled={isExpressLoading}
                 >
-                  Lançar refeição rápida
-                </span>
-                <span className="text-warning small" style={{ fontSize: "0.68rem" }}>
-                  <i className="bi bi-sparkles"></i> Express com IA
-                </span>
-              </div>
-              
-              <div className="col-12 mb-2">
-                <div className="input-group input-group-sm">
-                  <input
-                    type="text"
-                    className="form-control border-secondary text-white bg-transparent"
-                    placeholder="Ex: Mandioca com patinho grelhado ou 3 ovos mexidos"
-                    value={expressInput}
-                    onChange={(e) => setExpressInput(e.target.value)}
-                  />
-                  <button
-                    className="btn btn-outline-warning text-warning d-flex align-items-center gap-1"
-                    type="button"
-                    onClick={handleExpressMealParse}
-                    disabled={isExpressLoading}
-                    style={{ background: "rgba(212, 175, 55, 0.05)" }}
-                  >
-                    <i className="bi bi-magic"></i>
-                    {isExpressLoading ? "Calculando..." : "Estimar"}
-                  </button>
-                </div>
-                {expressError && (
-                  <div className="text-danger small mt-1" style={{ fontSize: "0.7rem" }}>
-                    {expressError}
-                  </div>
-                )}
-              </div>
-
-              <div className="col-6 col-md-3">
-                <input
-                  type="number"
-                  className="form-control form-control-sm border-secondary text-white bg-transparent"
-                  name="calorias"
-                  placeholder="Kcal"
-                  min="0"
-                  value={caloriesInput}
-                  onChange={(e) => setCaloriesInput(e.target.value)}
-                />
-              </div>
-              <div className="col-6 col-md-3">
-                <input
-                  type="number"
-                  className="form-control form-control-sm border-secondary text-white bg-transparent"
-                  name="proteina"
-                  placeholder="P (g)"
-                  min="0"
-                  value={proteinInput}
-                  onChange={(e) => setProteinInput(e.target.value)}
-                />
-              </div>
-              <div className="col-6 col-md-3">
-                <input
-                  type="number"
-                  className="form-control form-control-sm border-secondary text-white bg-transparent"
-                  name="carboidrato"
-                  placeholder="C (g)"
-                  min="0"
-                  value={carbsInput}
-                  onChange={(e) => setCarbsInput(e.target.value)}
-                />
-              </div>
-              <div className="col-6 col-md-3">
-                <input
-                  type="number"
-                  className="form-control form-control-sm border-secondary text-white bg-transparent"
-                  name="gordura"
-                  placeholder="G (g)"
-                  min="0"
-                  value={fatInput}
-                  onChange={(e) => setFatInput(e.target.value)}
-                />
-              </div>
-              <div className="col-12 mt-2">
-                <button type="submit" className="btn btn-sm btn-ascend w-100">
-                  Registrar Ingestão
+                  {isExpressLoading ? <span className="spinner-border spinner-border-sm" /> : <i className="bi bi-magic" />}
                 </button>
               </div>
-            </form>
 
-            {/* Controle de Hidratação */}
-            <div
-              className="hydration-container p-3 rounded"
-              style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(226,201,133,0.1)" }}
-            >
-              <div className="d-flex justify-content-between align-items-center mb-2">
-                <div>
-                  <span
-                    className="d-block text-muted small"
-                    style={{ fontSize: "0.65rem", fontWeight: 700 }}
-                  >
-                    CONTROLE DE ÁGUA
-                  </span>
-                  <strong className="fs-4 blue-text">
-                    <span id="lbl-agua">{agua}</span> <span className="text-muted fs-6">/ {waterGoal} ml</span>
-                  </strong>
+              {expressError && (
+                <div className="text-danger small mb-2" style={{ fontSize: "0.75rem" }}>
+                  {expressError}
                 </div>
-                <div className="d-flex align-items-center gap-2">
-                  <button
-                    type="button"
-                    className="btn btn-link text-muted p-0"
-                    title="Configurar Peso"
-                    onClick={() => {
-                      const newPeso = prompt("Digite seu peso atual em kg (ex: 75.5):", peso?.toString() || "");
-                      if (newPeso) {
-                        const parsed = parseFloat(newPeso);
-                        if (!isNaN(parsed) && parsed > 0) {
-                          handleUpdateWeight(parsed);
-                        }
-                      }
-                    }}
-                    style={{ minWidth: "24px", minHeight: "24px" }}
-                  >
-                    <i className="bi bi-gear" />
-                  </button>
-                  <span className="bi bi-droplet-fill fs-3 blue-text animate-pulse" />
+              )}
+
+              {/* Form de macro inputs controlado */}
+              <form onSubmit={handleQuickAdd}>
+                <div className="row g-2 mb-3">
+                  <div className="col-3">
+                    <label className="form-label text-muted small mb-0.5">Kcal</label>
+                    <input
+                      type="number"
+                      className="form-control bg-transparent text-white border-secondary text-center form-control-sm"
+                      value={caloriesInput}
+                      onChange={(e) => setCaloriesInput(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="col-3">
+                    <label className="form-label text-muted small mb-0.5">Prot(g)</label>
+                    <input
+                      type="number"
+                      className="form-control bg-transparent text-white border-secondary text-center form-control-sm"
+                      value={proteinInput}
+                      onChange={(e) => setProteinInput(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="col-3">
+                    <label className="form-label text-muted small mb-0.5">Carb(g)</label>
+                    <input
+                      type="number"
+                      className="form-control bg-transparent text-white border-secondary text-center form-control-sm"
+                      value={carbsInput}
+                      onChange={(e) => setCarbsInput(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="col-3">
+                    <label className="form-label text-muted small mb-0.5">Gord(g)</label>
+                    <input
+                      type="number"
+                      className="form-control bg-transparent text-white border-secondary text-center form-control-sm"
+                      value={fatInput}
+                      onChange={(e) => setFatInput(e.target.value)}
+                      required
+                    />
+                  </div>
                 </div>
-              </div>
 
-              {/* Progresso visual da água */}
-              <div className="progress mb-3" style={{ height: "6px", background: "rgba(255,255,255,0.05)" }}>
-                <div
-                  className="progress-bar bg-info"
-                  role="progressbar"
-                  style={{ width: `${Math.min((agua / waterGoal) * 100, 100)}%`, transition: "width 0.5s ease" }}
-                />
-              </div>
+                <button type="submit" className="btn btn-xs btn-ascend w-100">
+                  <i className="bi bi-plus-lg me-1"></i> Registrar Alimentos
+                </button>
+              </form>
+            </div>
+          </div>
 
+          {/* Controle de Hidratação */}
+          <div className="glass-card p-4 mb-4">
+            <h3 className="ascend-title mb-1" style={{ fontSize: "1.2rem", color: "var(--cream)" }}>
+              Controle de Hidratação
+            </h3>
+            <span className="text-muted small d-block mb-3">Sua meta diária estimada: {waterGoal} ml d'água</span>
+
+            <div className="d-flex align-items-center justify-content-between gap-4">
               <div className="d-flex gap-2">
                 <button
                   type="button"
-                  className="btn btn-sm btn-ascend-outline flex-grow-1"
-                  onClick={() => handleAddWater(200)}
+                  className="btn btn-sm btn-ascend-outline"
+                  onClick={() => handleAddWater(300)}
                 >
-                  +200ml
+                  +300 ml
                 </button>
                 <button
                   type="button"
-                  className="btn btn-sm btn-ascend-outline flex-grow-1"
+                  className="btn btn-sm btn-ascend-outline"
                   onClick={() => handleAddWater(500)}
                 >
-                  +500ml
+                  +500 ml
+                </button>
+                <button
+                  className="btn btn-sm btn-ascend"
+                  onClick={() => handleAddWater(1000)}
+                >
+                  +1.0L 💧
                 </button>
               </div>
-
-              {peso && (
-                <div className="text-center mt-2" style={{ fontSize: "0.65rem" }}>
-                  <span className="text-muted">Meta por peso: </span>
-                  <span className="gold-text fw-bold">{peso} kg ({peso} x 35ml)</span>
-                </div>
-              )}
+              <div className="text-end">
+                <strong className="fs-3 blue-text animate-pulse d-block">
+                  {agua}
+                </strong>
+                <span className="text-muted small">
+                  de {waterGoal} ml
+                </span>
+              </div>
+            </div>
+            <div className="progress mt-3" style={{ height: "6px", background: "rgba(255,255,255,0.03)" }}>
+              <div
+                className="progress-bar bg-info"
+                role="progressbar"
+                style={{ width: `${Math.min((agua / waterGoal) * 100, 100)}%` }}
+              />
             </div>
           </div>
-        </div>
 
-        {/* Construtor e Ficha de Treinos com Roteiro Semanal (Direita) */}
-        <div className="col-lg-7 col-md-12">
-          <div className="ascend-card p-4 h-100">
-            {/* Agenda Semanal de Dias */}
-            <div className="mb-4">
+          {/* Atividades e Fichas de Treino */}
+          <div className="glass-card p-4 mt-4">
+            <div className="mb-3">
               <span className="d-block text-muted small mb-2" style={{ fontSize: "0.7rem", fontWeight: 700, letterSpacing: "1px" }}>
                 CRONOGRAMA DE ATIVIDADES
               </span>
-              <div className="d-flex flex-wrap gap-1 bg-transparent p-1 rounded border" style={{ borderColor: "rgba(226,201,133,0.15)" }}>
+              <div className="d-flex flex-wrap gap-1 bg-transparent p-1 rounded border border-secondary">
                 {dbDiasAbrev.map((day) => (
                   <button
                     key={day}
                     onClick={() => setSelectedDayTab(day)}
-                    className={`btn btn-xs flex-grow-1 py-2 ${selectedDayTab === day ? "btn-ascend" : "btn-link text-white text-decoration-none"}`}
-                    style={{ minWidth: "40px", fontSize: "0.78rem", fontWeight: 700 }}
+                    className={`btn btn-xs flex-grow-1 py-1.5 px-0 ${selectedDayTab === day ? "btn-ascend" : "btn-link text-white text-decoration-none"}`}
+                    style={{ minWidth: "35px", fontSize: "0.73rem", fontWeight: 700 }}
                   >
                     {day}
                   </button>
                 ))}
                 <button
                   onClick={() => setSelectedDayTab("Todos")}
-                  className={`btn btn-xs py-2 px-3 ${selectedDayTab === "Todos" ? "btn-ascend" : "btn-link text-white text-decoration-none"}`}
-                  style={{ fontSize: "0.78rem", fontWeight: 700 }}
+                  className={`btn btn-xs py-1.5 px-2.5 ${selectedDayTab === "Todos" ? "btn-ascend" : "btn-link text-white text-decoration-none"}`}
+                  style={{ fontSize: "0.73rem", fontWeight: 700 }}
                 >
-                  Ver Tudo
+                  Tudo
                 </button>
               </div>
             </div>
 
-            <h3 className="ascend-title mb-4" style={{ fontSize: "1.2rem", color: "var(--cream)" }}>
-              {selectedDayTab === "Todos" ? "Todas as Rotinas Ativas" : `Atividades planejadas para ${dbDiasNomesCompletos[selectedDayTab]}`}
+            <h3 className="ascend-title mb-3" style={{ fontSize: "1.1rem", color: "var(--cream)" }}>
+              {selectedDayTab === "Todos" ? "Rotinas Planejadas" : `Treinos para ${dbDiasNomesCompletos[selectedDayTab]}`}
             </h3>
 
             {activeWorkouts.length === 0 ? (
-              <div
-                className="text-center py-5 border rounded"
-                style={{ border: "1px dashed var(--border-color) !important" }}
-              >
-                <span className="bi bi-calendar-check display-6 text-muted mb-3 d-block" />
-                <h4 className="ascend-title mb-2" style={{ fontSize: "1rem" }}>Dia de Descanso & Recuperação</h4>
-                <p className="text-muted small">Nenhuma atividade agendada para hoje. Aproveite para focar na nutrição e hidratação! 🧘‍♂️🌱</p>
+              <div className="text-center py-4 border rounded" style={{ border: "1px dashed rgba(226,201,133,0.1) !important" }}>
+                <span className="bi bi-calendar-check text-muted display-6 mb-2 d-block" />
+                <h4 className="ascend-title mb-1" style={{ fontSize: "0.92rem" }}>Descanso & Recuperação</h4>
+                <p className="text-muted small mb-0" style={{ fontSize: "0.78rem" }}>Nenhuma rotina para hoje. Foco no repouso! 🧘‍♂️</p>
               </div>
             ) : (
-              <div className="accordion accordion-premium animate-fade-in" id="accordionTreinos">
+              <div className="accordion accordion-premium" id="accordionTreinos">
                 {activeWorkouts.map((workout) => (
-                  <div
-                    className="accordion-item mb-3 rounded overflow-hidden"
-                    style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(226,201,133,0.15)" }}
-                    key={workout.id}
-                  >
+                  <div className="accordion-item mb-2.5" key={workout.id}>
                     <h2 className="accordion-header" id={`heading-${workout.id}`}>
                       <button
-                        className="accordion-button collapsed px-4 py-3 text-white bg-transparent"
+                        className="accordion-button collapsed px-3 py-2.5 text-white bg-transparent"
                         type="button"
                         data-bs-toggle="collapse"
                         data-bs-target={`#collapse-${workout.id}`}
-                        aria-expanded="false"
-                        aria-controls={`collapse-${workout.id}`}
+                        style={{ fontSize: "0.9rem" }}
                       >
                         <div className="d-flex justify-content-between align-items-center w-100 pe-3">
                           <div>
-                            <strong className="d-block" style={{ fontSize: "1.05rem", color: "var(--cream)" }}>
-                              {workout.nome}
-                            </strong>
-                            <div className="d-flex gap-2 align-items-center mt-1">
-                              {workout.conteudo ? (
-                                <span className="badge bg-secondary text-white-50" style={{ fontSize: "0.68rem" }}>
-                                  <i className="bi bi-activity"></i> Cardio/Outros
-                                </span>
-                              ) : (
-                                <span className="badge bg-primary text-white-50" style={{ fontSize: "0.68rem" }}>
-                                  <i className="bi bi-heart-pulse-fill"></i> Musculação
-                                </span>
-                              )}
-                              <span className="text-muted small" style={{ fontSize: "0.73rem" }}>
-                                Dias: {workout.dias_semana || "Nenhum agendado"}
-                              </span>
-                            </div>
+                            <strong className="d-block" style={{ color: "var(--cream)" }}>{workout.nome}</strong>
+                            <span className="text-muted small" style={{ fontSize: "0.7rem" }}>
+                              {workout.conteudo ? "Cardio / Outros" : "Musculação"}
+                            </span>
                           </div>
                         </div>
                       </button>
                     </h2>
-                    <div
-                      id={`collapse-${workout.id}`}
-                      className="accordion-collapse collapse"
-                      aria-labelledby={`heading-${workout.id}`}
-                      data-bs-parent="#accordionTreinos"
-                    >
-                      <div
-                        className="accordion-body p-4 border-top"
-                        style={{ borderTopColor: "rgba(226,201,133,0.15) !important" }}
-                      >
+                    <div id={`collapse-${workout.id}`} className="accordion-collapse collapse" data-bs-parent="#accordionTreinos">
+                      <div className="accordion-body p-3.5 border-top" style={{ borderColor: "rgba(226,201,133,0.1)" }}>
                         {workout.conteudo ? (
-                          /* Visualização para Cardio/Corrida/Luta */
-                          <div className="mb-4">
-                            <span className="d-block text-muted small mb-2" style={{ fontSize: "0.7rem", fontWeight: 700 }}>
+                          <div className="mb-3">
+                            <span className="d-block text-muted small mb-1" style={{ fontSize: "0.7rem", fontWeight: 700 }}>
                               DIRETRIZES DA ROTINA
                             </span>
-                            <div
-                              className="p-3 rounded mb-4"
-                              style={{ background: "rgba(226,201,133,0.03)", border: "1px solid rgba(226,201,133,0.1)", whiteSpace: "pre-wrap", color: "#f3ead8", fontSize: "0.92rem" }}
-                            >
+                            <div className="p-2.5 rounded mb-3 small" style={{ background: "rgba(226,201,133,0.03)", border: "1px solid rgba(226,201,133,0.1)", whiteSpace: "pre-wrap", color: "#f3ead8" }}>
                               {workout.conteudo}
                             </div>
                             <div className="d-flex justify-content-end gap-2">
@@ -1143,120 +1583,81 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
                                 className="btn btn-sm btn-ascend"
                                 onClick={() => handleConcluirTreino(workout.id)}
                               >
-                                <i className="bi bi-check2-circle"></i> Concluir Atividade
+                                Concluir Atividade
                               </button>
                             </div>
                           </div>
                         ) : (
-                          /* Visualização para Musculação */
                           <>
                             {workout.exercises.length === 0 ? (
-                              <div className="text-center py-3">
-                                <p className="text-muted small mb-3">Nenhum exercício neste treino.</p>
-                                <button
-                                  className="btn btn-xs btn-ascend-outline"
-                                  onClick={() => {
-                                    setExerciseModalTab("individual");
-                                    setActiveExerciseWorkoutId(workout.id);
-                                  }}
-                                >
-                                  + Adicionar Exercício
-                                </button>
+                              <div className="text-center py-3 text-muted small">
+                                Nenhum exercício cadastrado. Clique abaixo para iniciar!
                               </div>
                             ) : (
-                              <>
-                                <div className="table-responsive mb-4">
-                                  <table
-                                    className="table table-borderless align-middle text-white mb-0"
-                                    style={{ fontSize: "0.9rem" }}
-                                  >
-                                    <thead>
-                                      <tr
-                                        className="text-muted small border-bottom"
-                                        style={{ borderBottomColor: "rgba(226,201,133,0.1) !important" }}
-                                      >
-                                        <th style={{ width: "50%" }}>Exercício</th>
-                                        <th style={{ width: "15%" }}>Séries</th>
-                                        <th style={{ width: "15%" }}>Reps</th>
-                                        <th style={{ width: "20%" }} className="text-end">
-                                          Carga (kg)
-                                        </th>
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      {workout.exercises.map((ex) => (
-                                        <tr
-                                          className="border-bottom"
-                                          style={{ borderBottomColor: "rgba(255,255,255,0.02) !important" }}
-                                          key={ex.id}
-                                        >
-                                          <td>
-                                            <div className="d-flex align-items-center gap-2">
-                                              <strong className="text-white">{ex.nome_exercicio}</strong>
-                                              <button
-                                                type="button"
-                                                className="btn btn-link text-muted p-0"
-                                                title="Histórico de Carga"
-                                                style={{ minWidth: "24px", minHeight: "24px", display: "inline-flex", alignItems: "center" }}
-                                                onClick={() => openHistoryChart(ex)}
-                                              >
-                                                <i className="bi bi-graph-up gold-text" style={{ fontSize: "0.85rem" }} />
+                              <div className="table-responsive mb-3">
+                                <table className="table table-sm table-dark table-hover mb-0" style={{ fontSize: "0.8rem" }}>
+                                  <thead>
+                                    <tr>
+                                      <th>Exercício</th>
+                                      <th className="text-center">Séries</th>
+                                      <th className="text-center">Reps</th>
+                                      <th className="text-end">Carga</th>
+                                      <th className="text-center">Ações</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {workout.exercises.map((ex) => (
+                                      <tr key={ex.id}>
+                                        <td className="align-middle fw-bold">{ex.nome_exercicio}</td>
+                                        <td className="align-middle text-center">{ex.series}</td>
+                                        <td className="align-middle text-center">{ex.repeticoes}</td>
+                                        <td className="align-middle text-end text-success fw-bold">{ex.carga_atual} kg</td>
+                                        <td className="align-middle text-center">
+                                          <div className="d-flex gap-1.5 justify-content-center">
+                                            <button
+                                              className="btn btn-link text-warning p-0"
+                                              onClick={() => openHistoryChart(ex)}
+                                              title="Histórico de Cargas"
+                                            >
+                                              <span className="bi bi-graph-up" />
+                                            </button>
+                                            <form onSubmit={(e) => handleDeleteExercise(e, workout.id, ex.id)} style={{ display: "inline" }}>
+                                              <button type="submit" className="btn btn-link text-danger p-0">
+                                                <span className="bi bi-trash" />
                                               </button>
-                                            </div>
-                                          </td>
-                                          <td>{ex.series}</td>
-                                          <td>{ex.repeticoes}</td>
-                                          <td className="text-end">
-                                            <div className="d-flex align-items-center justify-content-end gap-2">
-                                              <input
-                                                type="number"
-                                                step="0.5"
-                                                className="form-control form-control-sm border-secondary text-white bg-transparent text-end"
-                                                style={{ width: "70px" }}
-                                                defaultValue={ex.carga_atual ?? 0}
-                                                onChange={(e) => handleSaveCarga(ex.id, e.target.value)}
-                                              />
-                                              <form
-                                                onSubmit={(e) => handleDeleteExercise(e, workout.id, ex.id)}
-                                                style={{ display: "inline" }}
-                                              >
-                                                <button type="submit" className="btn btn-link text-danger p-0">
-                                                  <span className="bi bi-trash" />
-                                                </button>
-                                              </form>
-                                            </div>
-                                          </td>
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                  </table>
-                                </div>
-                                <div className="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                                  <button
-                                    className="btn btn-sm btn-ascend-outline"
-                                    onClick={() => {
-                                      setExerciseModalTab("individual");
-                                      setActiveExerciseWorkoutId(workout.id);
-                                    }}
-                                  >
-                                    <i className="bi bi-plus-lg"></i> Adicionar Exercício
-                                  </button>
-                                  <div className="d-flex gap-2">
-                                    <form onSubmit={(e) => handleDeleteWorkout(e, workout.id)}>
-                                      <button type="submit" className="btn btn-sm btn-outline-danger">
-                                        Excluir Ficha
-                                      </button>
-                                    </form>
-                                    <button
-                                      className="btn btn-sm btn-ascend"
-                                      onClick={() => handleConcluirTreino(workout.id)}
-                                    >
-                                      <i className="bi bi-check2-circle"></i> Concluir Treino
-                                    </button>
-                                  </div>
-                                </div>
-                              </>
+                                            </form>
+                                          </div>
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
                             )}
+                            <div className="d-flex justify-content-between align-items-center">
+                              <button
+                                className="btn btn-sm btn-ascend-outline"
+                                onClick={() => {
+                                  setExerciseModalTab("individual");
+                                  setActiveExerciseWorkoutId(workout.id);
+                                }}
+                              >
+                                + Adicionar Exercício
+                              </button>
+                              <div className="d-flex gap-1.5">
+                                <form onSubmit={(e) => handleDeleteWorkout(e, workout.id)}>
+                                  <button type="submit" className="btn btn-sm btn-outline-danger">
+                                    Excluir Ficha
+                                  </button>
+                                </form>
+                                <button
+                                  className="btn btn-sm btn-ascend"
+                                  onClick={() => handleConcluirTreino(workout.id)}
+                                >
+                                  Concluir Treino
+                                </button>
+                              </div>
+                            </div>
                           </>
                         )}
                       </div>
@@ -1266,9 +1667,33 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
               </div>
             )}
 
+            {/* Histórico de Treinos Recentes */}
+            {workoutLogs && workoutLogs.length > 0 && (
+              <div className="mt-4 pt-3 border-top border-secondary">
+                <span className="d-block text-muted small mb-2" style={{ fontSize: "0.7rem", fontWeight: 700, letterSpacing: "1px", color: "var(--cream)" }}>
+                  ÚLTIMOS TREINOS CONCLUÍDOS
+                </span>
+                <div className="d-flex flex-column gap-2" style={{ maxHeight: "200px", overflowY: "auto" }}>
+                  {workoutLogs.slice(0, 5).map((log) => (
+                    <div key={log.id} className="d-flex justify-content-between align-items-center p-2 rounded" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
+                      <div>
+                        <strong className="text-white small d-block">{log.workout_nome}</strong>
+                        <span className="text-muted" style={{ fontSize: "0.68rem" }}>
+                          {new Date(log.data_conclusao).toLocaleDateString("pt-BR")}
+                        </span>
+                      </div>
+                      <span className="badge bg-transparent text-warning border border-warning-subtle" style={{ fontSize: "0.65rem" }}>
+                        Concluído
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Registrar Treino via Texto (IA) */}
             <div
-              className="mt-4 p-3 rounded"
+              className="mt-3 p-3 rounded"
               style={{
                 background: "rgba(255,255,255,0.02)",
                 border: "1px solid rgba(226,201,133,0.15)",
@@ -1276,29 +1701,26 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
                 transition: "box-shadow 0.3s ease-in-out"
               }}
             >
-              <div className="d-flex align-items-center justify-content-between mb-2">
-                <span
-                  className="text-warning small fw-bold d-flex align-items-center gap-1.5"
-                  style={{ fontSize: "0.82rem", textTransform: "uppercase" }}
-                >
+              <div className="d-flex align-items-center justify-content-between mb-1.5">
+                <span className="text-warning small fw-bold d-flex align-items-center gap-1.5" style={{ fontSize: "0.78rem", textTransform: "uppercase" }}>
                   <i className="bi bi-sparkles"></i> Registrar Treino via Texto (IA)
                 </span>
-                <span className="badge bg-black text-warning border border-secondary" style={{ fontSize: "0.68rem" }}>
+                <span className="badge bg-black text-warning border border-secondary" style={{ fontSize: "0.65rem" }}>
                   +30 XP ⚡
                 </span>
               </div>
               
-              <div className="mb-3">
+              <div className="mb-2">
                 <textarea
                   className="form-control bg-transparent text-white border-secondary small"
-                  style={{ height: "80px", fontSize: "0.85rem" }}
-                  placeholder="Ex: Treinei Peito e Tríceps hoje. Fiz Supino Reto: 4x10 com 60kg, Tríceps Corda: 3x12 com 25kg, Crucifixo Inclinado: 4x8 com 20kg de cada lado."
+                  style={{ height: "65px", fontSize: "0.8rem" }}
+                  placeholder="Ex: Treinei Peito hoje. Fiz Supino Reto: 4x10 com 60kg, Crucifixo Inclinado: 4x8 com 20kg"
                   value={workoutTextInput}
                   onChange={(e) => setWorkoutTextInput(e.target.value)}
                   disabled={isWorkoutLoading}
-                />
+                ></textarea>
                 {workoutError && (
-                  <div className="text-danger small mt-1.5" style={{ fontSize: "0.75rem" }}>
+                  <div className="text-danger small mt-1" style={{ fontSize: "0.72rem" }}>
                     {workoutError}
                   </div>
                 )}
@@ -1306,18 +1728,19 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
 
               <button
                 type="button"
-                className={`btn btn-sm btn-ascend w-100 d-flex align-items-center justify-content-center gap-2 ${isWorkoutLoading ? "placeholder-wave" : ""}`}
+                className="btn btn-xs btn-ascend w-100 d-flex align-items-center justify-content-center gap-1.5"
                 onClick={handleExpressWorkoutRegister}
                 disabled={isWorkoutLoading}
-                style={{ minHeight: "38px" }}
+                style={{ minHeight: "32px" }}
               >
                 <i className="bi bi-magic"></i>
-                {isWorkoutLoading ? "IA Analisando e Salvando..." : "Registrar Treino com IA"}
+                {isWorkoutLoading ? "IA Analisando..." : "Registrar com IA"}
               </button>
             </div>
           </div>
-        </div>
-      </div>
+        </div> {/* closes col-lg-5 */}
+      </div> {/* closes row */}
+
 
       {/* MODALS DA PÁGINA (Puro React) */}
 
@@ -1419,7 +1842,7 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
                         value={newWorkoutBatchExercises}
                         onChange={(e) => setNewWorkoutBatchExercises(e.target.value)}
                         placeholder={`Copie e cole sua lista de exercícios aqui se quiser:\nSupino Reto 4x10 24kg\nPuxada Alta 4x8-12 55kg\nAgachamento Livre 4x8 60kg`}
-                      />
+                      ></textarea>
                       <small className="text-muted d-block mt-1" style={{ fontSize: "0.75rem" }}>
                         💡 Você pode cadastrar o treino vazio agora e adicionar os exercícios depois!
                       </small>
@@ -1434,7 +1857,7 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
                         onChange={(e) => setNewWorkoutContent(e.target.value)}
                         placeholder="Ex: Treino de Boxe na assessoria, foco em movimentação e saco de pancadas (60 min).\nOu: Corrida contínua 8km em ritmo de Z2 (frequência cardíaca abaixo de 145 bpm)."
                         required
-                      />
+                      ></textarea>
                     </div>
                   )}
                 </div>
@@ -1623,7 +2046,7 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
                           onChange={(e) => setBatchText(e.target.value)}
                           placeholder={`Copie e cole como no exemplo:\nSupino Reto 4x8-12 24kg\nPuxada Alta 4x10 60kg\nRosca Alternada 3x12 14kg\nAgachamento Livre 4x10 80kg`}
                           required
-                        />
+                        ></textarea>
                       </div>
                       
                       {/* Preview em tempo real da importação */}

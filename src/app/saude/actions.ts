@@ -80,7 +80,7 @@ export async function generateHealthReportAction(tipo: "SEMANAL" | "MENSAL" | "T
     if (apiKey) {
       try {
         const ai = new GoogleGenerativeAI(apiKey);
-        const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = ai.getGenerativeModel({ model: "gemini-2.5-flash" });
 
         // Buscar todos os treinos para resolver nomes de rotina
         const workouts = await prisma.workouts.findMany({
@@ -324,7 +324,7 @@ export async function parseExpressMealAction(mealDescription: string) {
     }
 
     const ai = new GoogleGenerativeAI(apiKey);
-    const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = ai.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const prompt = `
 Você é o Nutricionista e Analista de Alimentos com IA do Ascend OS.
@@ -379,7 +379,7 @@ export async function parseExpressWorkoutAction(workoutText: string) {
 
     if (apiKey) {
       const ai = new GoogleGenerativeAI(apiKey);
-      const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const model = ai.getGenerativeModel({ model: "gemini-2.5-flash" });
 
       const prompt = `
 Você é o motor de IA de alta performance do Ascend OS. 

@@ -161,34 +161,32 @@ export default async function SaudePage() {
   });
 
   return (
-    <div className="container-fluid py-4">
-      <SaudeClientInitial
-        user={{
-          id: user.id,
-          nome: user.nome,
-          nivel: user.nivel || 1,
-          xp_total: user.xp_total || 0,
-          avatar: user.avatar,
-          peso: user.peso || 80
-        }}
-        initialNutrition={{
-          id: nutrition.id,
-          user_id: nutrition.user_id,
-          data: nutrition.data.toISOString(),
-          calorias_consumidas: nutrition.calorias_consumidas || 0,
-          calorias_meta: nutrition.calorias_meta || 2000,
-          proteina: nutrition.proteina || 0,
-          carboidrato: nutrition.carboidrato || 0,
-          gordura: nutrition.gordura || 0,
-          agua_ml: nutrition.agua_ml || 0
-        }}
-        workouts={workoutsWithExercises}
-        workoutLogs={workoutLogsWithNames}
-        initialWeights={serializedWeights}
-        initialNutritions={serializedNutritions}
-        initialLoadHistory={serializedLoadHistory}
-        initialReports={serializedReports}
-      />
-    </div>
+    <SaudeClientInitial
+      user={{
+        id: user.id,
+        nome: user.nome,
+        nivel: user.nivel || 1,
+        xp_total: user.xp_total || 0,
+        avatar: user.avatar,
+        peso: user.peso || 80
+      }}
+      initialNutrition={{
+        id: nutrition.id,
+        user_id: nutrition.user_id,
+        data: nutrition.data.toISOString(),
+        calorias_consumidas: nutrition.calorias_consumidas || 0,
+        calorias_meta: nutrition.calorias_meta || 2000,
+        proteina: nutrition.proteina || 0,
+        carboidrato: nutrition.carboidrato || 0,
+        gordura: nutrition.gordura || 0,
+        agua_ml: nutrition.agua_ml || 0
+      }}
+      workouts={workoutsWithExercises}
+      workoutLogs={workoutLogsWithNames}
+      initialWeights={serializedWeights}
+      initialNutritions={serializedNutritions}
+      initialLoadHistory={serializedLoadHistory}
+      initialReports={serializedReports}
+    />
   );
 }

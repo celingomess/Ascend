@@ -903,6 +903,11 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
   const caloriasConsumidas = nutrition.calorias_consumidas ?? 0;
   const caloriasMeta = nutrition.calorias_meta ?? 2000;
   const currentPeso = peso || user.peso || 80;
+  
+  // Metas de macros calculadas de forma a somar exatamente a meta calórica
+  const proteinTarget = Math.round(currentPeso * 2);
+  const fatTarget = Math.round(currentPeso * 0.8);
+  const carbTarget = Math.max(Math.round((caloriasMeta - (proteinTarget * 4 + fatTarget * 9)) / 4), 0);
 
   return (
     <div className="container-fluid py-4">
@@ -1280,7 +1285,7 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
                     stroke="#2ec4b6"
                     style={{
                       strokeDasharray: "320.4",
-                      strokeDashoffset: 320.4 - 320.4 * Math.min((nutrition.proteina || 0) / (Math.round((currentPeso || 80) * 2) || 160), 1),
+                      strokeDashoffset: 320.4 - 320.4 * Math.min((nutrition.proteina || 0) / proteinTarget, 1),
                     }}
                   />
 
@@ -1294,7 +1299,7 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
                     stroke="#4b88be"
                     style={{
                       strokeDasharray: "232.5",
-                      strokeDashoffset: 232.5 - 232.5 * Math.min((nutrition.carboidrato || 0) / (Math.round((currentPeso || 80) * 3) || 240), 1),
+                      strokeDashoffset: 232.5 - 232.5 * Math.min((nutrition.carboidrato || 0) / carbTarget, 1),
                     }}
                   />
 
@@ -1308,7 +1313,7 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
                     stroke="#e76f51"
                     style={{
                       strokeDasharray: "144.5",
-                      strokeDashoffset: 144.5 - 144.5 * Math.min((nutrition.gordura || 0) / (Math.round((currentPeso || 80) * 0.8) || 64), 1),
+                      strokeDashoffset: 144.5 - 144.5 * Math.min((nutrition.gordura || 0) / fatTarget, 1),
                     }}
                   />
                 </svg>
@@ -1336,10 +1341,10 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
                       <span className="macro-dot" style={{ background: "#2ec4b6" }} />
                       Proteínas
                     </span>
-                    <strong>{nutrition.proteina || 0}g / {Math.round((currentPeso || 80) * 2) || 160}g</strong>
+                    <strong>{nutrition.proteina || 0}g / {proteinTarget}g</strong>
                   </div>
                   <div className="progress" style={{ height: "4px", background: "rgba(255,255,255,0.03)" }}>
-                    <div className="progress-bar" style={{ background: "#2ec4b6", width: `${Math.min(((nutrition.proteina || 0) / (Math.round((currentPeso || 80) * 2) || 160)) * 100, 100)}%` }}></div>
+                    <div className="progress-bar" style={{ background: "#2ec4b6", width: `${Math.min(((nutrition.proteina || 0) / proteinTarget) * 100, 100)}%` }}></div>
                   </div>
                 </div>
 
@@ -1350,10 +1355,10 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
                       <span className="macro-dot" style={{ background: "#4b88be" }} />
                       Carbos
                     </span>
-                    <strong>{nutrition.carboidrato || 0}g / {Math.round((currentPeso || 80) * 3) || 240}g</strong>
+                    <strong>{nutrition.carboidrato || 0}g / {carbTarget}g</strong>
                   </div>
                   <div className="progress" style={{ height: "4px", background: "rgba(255,255,255,0.03)" }}>
-                    <div className="progress-bar" style={{ background: "#4b88be", width: `${Math.min(((nutrition.carboidrato || 0) / (Math.round((currentPeso || 80) * 3) || 240)) * 100, 100)}%` }}></div>
+                    <div className="progress-bar" style={{ background: "#4b88be", width: `${Math.min(((nutrition.carboidrato || 0) / carbTarget) * 100, 100)}%` }}></div>
                   </div>
                 </div>
 
@@ -1364,10 +1369,10 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
                       <span className="macro-dot" style={{ background: "#e76f51" }} />
                       Gorduras
                     </span>
-                    <strong>{nutrition.gordura || 0}g / {Math.round((currentPeso || 80) * 0.8) || 64}g</strong>
+                    <strong>{nutrition.gordura || 0}g / {fatTarget}g</strong>
                   </div>
                   <div className="progress" style={{ height: "4px", background: "rgba(255,255,255,0.03)" }}>
-                    <div className="progress-bar" style={{ background: "#e76f51", width: `${Math.min(((nutrition.gordura || 0) / (Math.round((currentPeso || 80) * 0.8) || 64)) * 100, 100)}%` }}></div>
+                    <div className="progress-bar" style={{ background: "#e76f51", width: `${Math.min(((nutrition.gordura || 0) / fatTarget) * 100, 100)}%` }}></div>
                   </div>
                 </div>
               </div>

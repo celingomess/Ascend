@@ -7,6 +7,16 @@ import { authOptions } from "@/lib/auth";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { updateUserStreak } from "@/lib/streaks";
 
+// Helper para extrair JSON de respostas de texto da IA de forma robusta
+function extractJSON(text: string): string {
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  if (start !== -1 && end !== -1 && end > start) {
+    return text.substring(start, end + 1);
+  }
+  return text;
+}
+
 export async function generateHealthReportAction(tipo: "SEMANAL" | "MENSAL" | "TREINO") {
   try {
     const session = await getServerSession(authOptions);
@@ -333,10 +343,9 @@ Você deve responder APENAS com um objeto JSON válido (sem markdown, sem blocos
     `.trim();
 
     const result = await model.generateContent(prompt);
-    let text = result.response.text().trim();
-    text = text.replace(/```json/gi, "").replace(/```/g, "").trim();
-
-    const parsed = JSON.parse(text);
+    const rawText = result.response.text().trim();
+    const cleanJson = extractJSON(rawText);
+    const parsed = JSON.parse(cleanJson);
     return {
       success: true,
       calorias: parsed.calorias || 0,
@@ -395,9 +404,9 @@ Se o usuário omitir repetições ou séries, use 3 ou 10 como padrão razoável
       `.trim();
 
       const result = await model.generateContent(prompt);
-      let text = result.response.text().trim();
-      text = text.replace(/```json/gi, "").replace(/```/g, "").trim();
-      aiResponse = JSON.parse(text);
+      const rawText = result.response.text().trim();
+      const cleanJson = extractJSON(rawText);
+      aiResponse = JSON.parse(cleanJson);
     } else {
       aiResponse = {
         nomeTreino: "Treino Rápido (IA Fallback)",

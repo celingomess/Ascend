@@ -1506,6 +1506,7 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
                     <label className="form-label text-muted small mb-1 fw-bold" style={{ fontSize: "0.72rem" }}>Kcal</label>
                     <input
                       type="number"
+                      name="calorias"
                       className="form-control bg-dark text-white border-secondary text-center form-control-sm"
                       value={caloriesInput}
                       onChange={(e) => setCaloriesInput(e.target.value)}
@@ -1516,6 +1517,7 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
                     <label className="form-label text-muted small mb-1 fw-bold" style={{ fontSize: "0.72rem" }}>Proteínas (g)</label>
                     <input
                       type="number"
+                      name="proteina"
                       className="form-control bg-dark text-white border-secondary text-center form-control-sm"
                       value={proteinInput}
                       onChange={(e) => setProteinInput(e.target.value)}
@@ -1526,6 +1528,7 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
                     <label className="form-label text-muted small mb-1 fw-bold" style={{ fontSize: "0.72rem" }}>Carbos (g)</label>
                     <input
                       type="number"
+                      name="carboidrato"
                       className="form-control bg-dark text-white border-secondary text-center form-control-sm"
                       value={carbsInput}
                       onChange={(e) => setCarbsInput(e.target.value)}
@@ -1536,6 +1539,7 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
                     <label className="form-label text-muted small mb-1 fw-bold" style={{ fontSize: "0.72rem" }}>Gorduras (g)</label>
                     <input
                       type="number"
+                      name="gordura"
                       className="form-control bg-dark text-white border-secondary text-center form-control-sm"
                       value={fatInput}
                       onChange={(e) => setFatInput(e.target.value)}

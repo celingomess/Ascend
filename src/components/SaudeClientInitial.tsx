@@ -229,6 +229,52 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
     }
   };
 
+    // Balanço Energético Automático em Tempo Real do Dia (TMB + Atividades vs Ingestão)
+  const dailyLiveMath = useMemo(() => {
+    const userWeight = typeof peso === "number" ? peso : (typeof calcPeso === "number" ? calcPeso : parseFloat(calcPeso as string) || 80);
+    const userHeight = typeof calcAltura === "number" ? calcAltura : parseFloat(calcAltura as string) || 175;
+    const userIdade = typeof calcIdade === "number" ? calcIdade : parseInt(calcIdade as string) || 25;
+
+    // Metabolismo Basal (Mifflin-St Jeor)
+    const tmb = Math.round(10 * userWeight + 6.25 * userHeight - 5 * userIdade + 5);
+    // Atividade diaria leve (NEAT ~25% da TMB)
+    const neat = Math.round(tmb * 0.25);
+
+    // Verificacao de treinos concluidos hoje
+    const hojeStr = new Date().toISOString().split("T")[0];
+    const treinosHoje = (workoutLogs || []).filter((log: any) => {
+      if (!log.data_conclusao) return false;
+      const dStr = new Date(log.data_conclusao).toISOString().split("T")[0];
+      return dStr === hojeStr;
+    }).length;
+
+    const gastoExerciciosHoje = treinosHoje > 0 ? treinosHoje * 300 : (typeof calcGastoTreino === "number" ? calcGastoTreino : parseFloat(calcGastoTreino as string) || 250);
+    const tdeeEstimadoHoje = tmb + neat + gastoExerciciosHoje;
+    const caloriasIngeridas = nutrition.calorias_consumidas || 0;
+    const saldoDiario = caloriasIngeridas - tdeeEstimadoHoje;
+
+    return {
+      tmb,
+      neat,
+      gastoExerciciosHoje,
+      tdeeEstimadoHoje,
+      caloriasIngeridas,
+      saldoDiario,
+      isDeficit: saldoDiario < 0,
+    };
+  }, [peso, calcPeso, calcAltura, calcIdade, calcGastoTreino, workoutLogs, nutrition.calorias_consumidas]);
+
+  // Função para preencher calculadora automaticamente com dados do perfil
+  const handleAutoFillCalculator = () => {
+    setCalcSexo("M");
+    setCalcIdade(25);
+    setCalcPeso(user.peso || 80);
+    setCalcAltura(175);
+    setCalcFatorAtividade(1.375);
+    setCalcGastoTreino(dailyLiveMath.gastoExerciciosHoje);
+    setCalcObjetivo(-0.20);
+  };
+
   const [chartTimeRange, setChartTimeRange] = useState<7 | 30 | 90>(30);
   const [hoveredPoint, setHoveredPoint] = useState<{
     x: number;
@@ -1414,6 +1460,32 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
               </div>
             </div>
 
+            {/* Painel de Balanço Calórico Automático em Tempo Real */}
+            <div className="p-3 mb-4 rounded-3 bg-dark border border-secondary">
+              <div className="d-flex justify-content-between align-items-center mb-1">
+                <span className="text-muted small fw-bold" style={{ fontSize: "0.72rem", letterSpacing: "0.5px" }}>
+                  BALANÇO ENERGÉTICO REAL DO DIA
+                </span>
+                <span className={`badge ${dailyLiveMath.isDeficit ? "bg-success text-dark" : "bg-warning text-dark"} fw-bold`} style={{ fontSize: "0.68rem" }}>
+                  {dailyLiveMath.isDeficit ? "DÉFICIT REAL" : "SUPERÁVIT REAL"}
+                </span>
+              </div>
+              <div className="d-flex justify-content-between align-items-baseline">
+                <div>
+                  <strong className={`fs-3 fw-bold ${dailyLiveMath.isDeficit ? "text-success" : "text-warning"}`}>
+                    {dailyLiveMath.saldoDiario > 0 ? `+${dailyLiveMath.saldoDiario}` : dailyLiveMath.saldoDiario} kcal
+                  </strong>
+                  <span className="text-muted small ms-2">
+                    ({dailyLiveMath.caloriasIngeridas} ingeridas - {dailyLiveMath.tdeeEstimadoHoje} gastas)
+                  </span>
+                </div>
+              </div>
+              <div className="d-flex justify-content-between text-muted small mt-2 pt-2 border-top border-secondary" style={{ fontSize: "0.72rem" }}>
+                <span>Metabolismo Basal (TMB): <strong>{dailyLiveMath.tmb} kcal</strong></span>
+                <span>Atividades + Exercícios: <strong>+{dailyLiveMath.neat + dailyLiveMath.gastoExerciciosHoje} kcal</strong></span>
+              </div>
+            </div>
+
             {/* Concentric Activity Rings & Exibição de Calorias */}
             <div className="d-flex align-items-center justify-content-center gap-4 flex-wrap mb-4">
               <div
@@ -2084,12 +2156,21 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
                   <h4 className="modal-title text-white fw-bold mb-0">Calculadora Científica de Déficit Calórico & TDEE</h4>
                   <span className="text-muted small">Cálculo de Metabolismo Basal (Mifflin-St Jeor) e Gasto Energético Total</span>
                 </div>
-                <button
-                  type="button"
-                  className="btn-close btn-close-white"
-                  onClick={() => setIsCalculadoraOpen(false)}
-                  aria-label="Close"
-                ></button>
+                <div className="d-flex gap-2 align-items-center">
+                  <button
+                    type="button"
+                    className="btn btn-xs btn-outline-warning rounded-pill px-3"
+                    onClick={handleAutoFillCalculator}
+                  >
+                    Auto-Preencher com Meus Dados
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-close btn-close-white"
+                    onClick={() => setIsCalculadoraOpen(false)}
+                    aria-label="Close"
+                  ></button>
+                </div>
               </div>
 
               <div className="modal-body px-4 py-3">

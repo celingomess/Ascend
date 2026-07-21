@@ -70,6 +70,7 @@ export const authOptions: NextAuthOptions = {
   },
   pages: {
     signIn: "/login",
+    signOut: "/auth/logout",
   },
   secret: process.env.NEXTAUTH_SECRET || "supersecret-ascend-key-123",
 };

@@ -54,6 +54,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ user }) => {
     { name: "Perfil", path: "/perfil", iconClass: "bi bi-person" },
   ];
 
+  const handleLogout = async () => {
+    try {
+      await signOut({ redirect: false });
+    } catch (err) {}
+    window.location.href = "/login";
+  };
+
   return (
     <aside className="ascend-sidebar">
       <div className="sidebar-top">
@@ -130,7 +137,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ user }) => {
       <div className="sidebar-bottom">
         <button
           type="button"
-          onClick={() => signOut({ callbackUrl: "/login" })}
+          onClick={handleLogout}
           className="sidebar-item text-danger border-0 bg-transparent w-100 text-start"
           style={{ cursor: "pointer" }}
         >

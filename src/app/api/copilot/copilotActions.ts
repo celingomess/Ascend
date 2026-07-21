@@ -96,21 +96,22 @@ Seja conciso, direto, motivador e amigável.`;
 
       if (call.name === "add_expense") {
         const dataHoje = new Date();
+        const valorFinal = args.tipo === "Entrada" ? Math.abs(args.valor) : -Math.abs(args.valor);
         await prisma.financial_transactions.create({
           data: {
             user_id: userId,
-            valor: args.valor,
-            tipo: args.tipo === "Entrada" ? "Entrada" : "Saída",
+            valor: valorFinal,
             categoria: args.categoria || "Outros",
             descricao: args.descricao || "Registrado via Copilot",
             data: dataHoje,
           },
         });
 
+        const tipoTexto = valorFinal < 0 ? "Despesa" : "Receita";
         return {
           success: true,
           actionExecuted: "add_expense",
-          reply: `✅ Transação de **R$ ${args.valor.toFixed(2)}** (${args.tipo}) registrada com sucesso na categoria **${args.categoria}**!`,
+          reply: `✅ ${tipoTexto} de **R$ ${Math.abs(args.valor).toFixed(2)}** registrada com sucesso na categoria **${args.categoria}** ("${args.descricao}")!`,
         };
       }
 

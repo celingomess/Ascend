@@ -4,17 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import {
-  Home,
-  Compass,
-  HeartPulse,
-  Clock,
-  Award,
-  Gem,
-  TrendingUp,
-  User,
-  LogOut,
-} from "lucide-react";
+import LogoAscend from "@/components/LogoAscend";
 
 interface SidebarProps {
   user: {
@@ -32,64 +22,89 @@ export const Sidebar: React.FC<SidebarProps> = ({ user }) => {
   const xpNivelAtual = user.xp_total % 500;
   const percentualEvolucao = Math.round((xpNivelAtual / 500) * 100);
 
+  // Normalização do caminho do avatar para evitar erro 404
+  const avatarSrc = user.avatar
+    ? user.avatar.startsWith("/") || user.avatar.startsWith("http")
+      ? user.avatar
+      : `/uploads/${user.avatar}`
+    : null;
+
+  // Obter Título do Rank de Acordo com o Nível
+  const getRankTitle = (nivel: number) => {
+    if (nivel >= 20) return "Dominador";
+    if (nivel >= 15) return "Visionário";
+    if (nivel >= 10) return "Estrategista";
+    if (nivel >= 5) return "Arquiteto";
+    if (nivel >= 3) return "Executor";
+    if (nivel >= 2) return "Persistente";
+    return "Despertar";
+  };
+
+  const rankTitle = getRankTitle(user.nivel);
+
   const menuItems = [
-    { name: "Início", path: "/dashboard", icon: () => <Home size={20} /> },
-    { name: "Jornadas", path: "/metas", icon: () => <Compass size={20} /> },
-    { name: "Foco", path: "/foco", icon: () => <Clock size={20} /> },
-    { name: "Saúde", path: "/saude", icon: () => <HeartPulse size={20} /> },
-    { name: "Finanças", path: "/financas", icon: () => <span className="bi bi-bank" style={{ fontSize: "1.2rem", color: "inherit" }} /> },
-    { name: "Legado", path: "/conquistas", icon: () => <Award size={20} /> },
-    { name: "Ascensão", path: "/ascensao", icon: () => <Gem size={20} /> },
-    { name: "Hall", path: "/hall", icon: () => <TrendingUp size={20} /> },
-    { name: "Perfil", path: "/perfil", icon: () => <User size={20} /> },
+    { name: "Início", path: "/dashboard", iconClass: "bi bi-house-door" },
+    { name: "Jornadas", path: "/metas", iconClass: "bi bi-compass" },
+    { name: "Foco", path: "/foco", iconClass: "bi bi-clock-history" },
+    { name: "Saúde", path: "/saude", iconClass: "bi bi-heart-pulse" },
+    { name: "Finanças", path: "/financas", iconClass: "bi bi-bank" },
+    { name: "Legado", path: "/conquistas", iconClass: "bi bi-trophy" },
+    { name: "Ascensão", path: "/ascensao", iconClass: "bi bi-gem" },
+    { name: "Hall", path: "/hall", iconClass: "bi bi-graph-up-arrow" },
+    { name: "Perfil", path: "/perfil", iconClass: "bi bi-person" },
   ];
 
   return (
     <aside className="ascend-sidebar">
-      <div>
-        {/* Brand */}
-        <div className="sidebar-brand">
-          <h1>ASCEND OS</h1>
-          <p>SISTEMA OPERACIONAL PESSOAL</p>
-        </div>
+      <div className="sidebar-top">
+        {/* Brand / Logo */}
+        <Link href="/dashboard" className="sidebar-logo">
+          <div className="logo-icon">
+            <LogoAscend height={32} />
+          </div>
+          <div className="logo-text">
+            <span className="logo-title">ASCEND OS</span>
+            <span className="logo-subtitle">SISTEMA OPERACIONAL</span>
+          </div>
+        </Link>
 
         {/* User Card */}
-        <div className="sidebar-user-card">
-          <div className="user-avatar-wrapper position-relative">
-            {user.avatar ? (
+        <div className="sidebar-profile">
+          <div className="sidebar-avatar">
+            {avatarSrc ? (
               <img
-                src={user.avatar}
+                src={avatarSrc}
                 alt={user.nome}
-                className="user-avatar img-fluid"
-                style={{ width: "42px", height: "42px", borderRadius: "50%", objectFit: "cover" }}
+                onError={(e) => {
+                  (e.target as HTMLElement).style.display = "none";
+                  const fallback = (e.target as HTMLElement).nextElementSibling;
+                  if (fallback) fallback.classList.remove("d-none");
+                }}
               />
-            ) : (
-              <div className="user-avatar-placeholder d-flex align-items-center justify-content-center fw-bold bg-dark text-warning border border-secondary" style={{ width: "42px", height: "42px", borderRadius: "50%" }}>
-                {user.nome ? user.nome.charAt(0).toUpperCase() : "U"}
-              </div>
-            )}
+            ) : null}
+            <div className={`avatar-placeholder ${avatarSrc ? "d-none" : ""}`}>
+              {user.nome ? user.nome.charAt(0).toUpperCase() : "U"}
+            </div>
           </div>
-          <div className="user-info overflow-hidden">
-            <span className="user-name text-truncate d-block text-white fw-bold">{user.nome}</span>
-            <span className="user-level text-warning small fw-semibold">Nível {user.nivel}</span>
-          </div>
-        </div>
+          <div className="sidebar-rank text-center">{rankTitle}</div>
+          <div className="sidebar-profile-name text-center text-truncate">{user.nome}</div>
+          <div className="sidebar-profile-level text-center">Nível {user.nivel}</div>
 
-        {/* XP Progress Bar */}
-        <div className="sidebar-xp-container px-3 mb-3">
-          <div className="d-flex justify-content-between align-items-center mb-1 style-xp-text" style={{ fontSize: "0.7rem" }}>
-            <span className="text-muted fw-semibold">XP no Nível</span>
-            <span className="text-warning fw-bold">{xpNivelAtual} / 500 XP</span>
-          </div>
-          <div className="progress" style={{ height: "4px", background: "rgba(255,255,255,0.06)", borderRadius: "2px" }}>
-            <div
-              className="progress-bar bg-warning"
-              role="progressbar"
-              style={{ width: `${percentualEvolucao}%`, transition: "width 0.4s ease" }}
-              aria-valuenow={percentualEvolucao}
-              aria-valuemin={0}
-              aria-valuemax={100}
-            />
+          {/* XP Progress Bar */}
+          <div className="sidebar-profile-progress mt-2">
+            <div className="progress">
+              <div
+                className="progress-bar"
+                role="progressbar"
+                style={{ width: `${percentualEvolucao}%` }}
+                aria-valuenow={percentualEvolucao}
+                aria-valuemin={0}
+                aria-valuemax={100}
+              />
+            </div>
+            <small className="text-muted d-block text-center mt-1">
+              {xpNivelAtual} / 500 XP
+            </small>
           </div>
         </div>
 
@@ -97,14 +112,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ user }) => {
         <nav className="sidebar-nav">
           {menuItems.map((item) => {
             const isActive = pathname === item.path || pathname?.startsWith(item.path + "/");
-            const Icon = item.icon;
             return (
               <Link
                 key={item.path}
                 href={item.path}
                 className={`sidebar-item ${isActive ? "active" : ""}`}
               >
-                <Icon />
+                <i className={item.iconClass} style={{ fontSize: "1.2rem" }} />
                 <span>{item.name}</span>
               </Link>
             );
@@ -120,8 +134,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ user }) => {
           className="sidebar-item text-danger border-0 bg-transparent w-100 text-start"
           style={{ cursor: "pointer" }}
         >
-          <LogOut size={20} />
-          <span>Sair</span>
+          <i className="bi bi-box-arrow-right text-danger" style={{ fontSize: "1.2rem" }} />
+          <span className="text-danger fw-bold">Sair</span>
         </button>
       </div>
     </aside>

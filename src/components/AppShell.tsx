@@ -18,12 +18,13 @@ interface AppShellProps {
 
 export default function AppShell({ user, children }: AppShellProps) {
   const pathname = usePathname();
-  const isAuthPage =
+  const isStandalonePage =
+    pathname === "/" ||
     pathname === "/login" ||
     pathname === "/cadastro" ||
     pathname?.startsWith("/auth");
 
-  if (isAuthPage) {
+  if (isStandalonePage) {
     return <main className="w-100 min-vh-100 p-0 m-0">{children}</main>;
   }
 

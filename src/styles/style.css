@@ -1417,4 +1417,91 @@ html body label {
 /* Suavização da Sidebar Adaptativa (Transition) */
 .ascend-sidebar {
     transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
-}
+}
+
+
+/* ===================================
+   BOOTSTRAP DARK THEME GLOBAL OVERRIDES
+   =================================== */
+
+/* Modals */
+.modal-content {
+    background-color: #09120c !important;
+    color: var(--cream) !important;
+    border: 1px solid rgba(226, 201, 133, 0.25) !important;
+    border-radius: 24px !important;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.85) !important;
+}
+
+.modal-header,
+.modal-footer {
+    border-color: rgba(226, 201, 133, 0.15) !important;
+}
+
+/* Accordions */
+.accordion-item {
+    background-color: rgba(10, 18, 12, 0.75) !important;
+    border: 1px solid rgba(226, 201, 133, 0.18) !important;
+    color: var(--cream) !important;
+    border-radius: 14px !important;
+    overflow: hidden;
+}
+
+.accordion-button {
+    background-color: transparent !important;
+    color: var(--cream) !important;
+    box-shadow: none !important;
+}
+
+.accordion-button:not(.collapsed) {
+    background-color: rgba(226, 201, 133, 0.1) !important;
+    color: var(--gold-soft) !important;
+    box-shadow: none !important;
+}
+
+.accordion-button::after {
+    filter: invert(1) sepia(1) saturate(5) hue-rotate(5deg) !important;
+}
+
+/* Select Option Overrides */
+.form-select option {
+    background-color: #0b140e !important;
+    color: #f5eddd !important;
+}
+
+/* Tables */
+.table {
+    --bs-table-bg: transparent !important;
+    --bs-table-color: var(--cream) !important;
+    --bs-table-border-color: rgba(226, 201, 133, 0.12) !important;
+    color: var(--cream) !important;
+}
+
+.table td, .table th {
+    background-color: transparent !important;
+    color: var(--cream) !important;
+    border-color: rgba(226, 201, 133, 0.12) !important;
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(226, 201, 133, 0.06) !important;
+    color: var(--cream) !important;
+}
+
+/* Dropdowns */
+.dropdown-menu {
+    background-color: #0d1711 !important;
+    color: var(--cream) !important;
+    border: 1px solid rgba(226, 201, 133, 0.2) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.6) !important;
+}
+
+.dropdown-item {
+    color: var(--cream) !important;
+}
+
+.dropdown-item:hover, .dropdown-item:focus {
+    background-color: rgba(226, 201, 133, 0.15) !important;
+    color: var(--gold-soft) !important;
+}

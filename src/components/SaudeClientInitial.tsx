@@ -149,7 +149,8 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
   };
 
     // Estados da Calculadora Cientifica de TDEE e Deficit Calorico (Mifflin-St Jeor)
-    const [isBiometriaOpen, setIsBiometriaOpen] = useState(false);
+    const [expandedReportId, setExpandedReportId] = useState<number | null>(null);
+  const [isBiometriaOpen, setIsBiometriaOpen] = useState(false);
   const [bioPesoInput, setBioPesoInput] = useState<string>(user.peso ? user.peso.toString() : "80");
   const [bioAlturaInput, setBioAlturaInput] = useState<string>(user.altura ? user.altura.toString() : "175");
   const [bioIdadeInput, setBioIdadeInput] = useState<string>(user.idade ? user.idade.toString() : "25");
@@ -1373,114 +1374,112 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
             </div>
           </div>
 
-          {/* Coach de IA / Diagnóstico */}
+          {/* Coach de IA / Diagnostico Executivo */}
           <div className="glass-card p-4">
             <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
               <div>
-                <h3 className="ascend-title mb-0" style={{ fontSize: "1.2rem", color: "var(--cream)" }}>
+                <h3 className="ascend-title mb-0" style={{ fontSize: "1.25rem", color: "var(--cream)" }}>
                   Diagnóstico IA & Planejamento
                 </h3>
-                <span className="text-muted small">Crie análises evolutivas automáticas sobre seus treinos e saúde</span>
+                <span className="text-muted small">Análises evolutivas automáticas sobre seus treinos e saúde</span>
               </div>
               <div className="d-flex gap-2">
                 <select
-                  className="form-select bg-transparent text-white border-secondary form-select-sm"
+                  className="form-select bg-dark text-white border-secondary form-select-sm"
                   style={{ width: "130px", fontSize: "0.8rem" }}
                   value={reportType}
                   onChange={(e) => setReportType(e.target.value as any)}
                   disabled={loadingReport}
                 >
-                  <option value="SEMANAL" className="bg-dark text-white">Semanal</option>
-                  <option value="MENSAL" className="bg-dark text-white">Mensal</option>
-                  <option value="TREINO" className="bg-dark text-white">Musculação</option>
+                  <option value="SEMANAL">Semanal</option>
+                  <option value="MENSAL">Mensal</option>
+                  <option value="TREINO">Musculação</option>
                 </select>
                 <button
-                  className="btn btn-sm btn-ascend"
+                  className="btn btn-sm btn-ascend fw-bold px-3"
                   onClick={handleGenerateReport}
                   disabled={loadingReport}
                 >
-                  {loadingReport ? (
-                    <>
-                      <span className="spinner-border spinner-border-sm me-1.5" />
-                      Analisando...
-                    </>
-                  ) : (
-                    <>
-                      <i className="bi bi-cpu me-1"></i> Diagnóstico
-                    </>
-                  )}
+                  {loadingReport ? "Analisando..." : "Gerar Diagnóstico"}
                 </button>
               </div>
             </div>
 
             {statusMsg && (
-              <div className="alert alert-info py-2 px-3 small border-0 text-white-50 mb-3" style={{ background: "rgba(226,201,133,0.05)" }}>
+              <div className="alert alert-dark border border-secondary text-warning small py-2 px-3 mb-3" style={{ fontSize: "0.82rem" }}>
                 {statusMsg}
               </div>
             )}
 
             {/* Histórico de Relatórios */}
             {reports.length === 0 ? (
-              <div className="text-center py-4 border rounded" style={{ border: "1px dashed rgba(226,201,133,0.1) !important" }}>
-                <span className="bi bi-chat-left-dots text-muted display-6 d-block mb-2" />
-                <span className="text-muted small">Você ainda não gerou diagnósticos de IA. Selecione o período acima e clique em Diagnóstico!</span>
+              <div className="text-center py-4 border border-secondary rounded-3 bg-dark">
+                <span className="text-muted small d-block">Você ainda não gerou diagnósticos de IA. Selecione o período acima e clique em Gerar Diagnóstico.</span>
               </div>
             ) : (
-              <div className="accordion accordion-premium" id="accordionReports">
-                {reports.map((rep, idx) => (
-                  <div className="accordion-item mb-2" key={rep.id}>
-                    <h2 className="accordion-header">
-                      <button
-                        className="accordion-button collapsed px-3 py-2 text-white bg-transparent small"
-                        type="button"
-                        data-bs-toggle="collapse"
-                        data-bs-target={`#rep-collapse-${rep.id}`}
-                        style={{ fontSize: "0.85rem" }}
+              <div className="d-flex flex-column gap-2">
+                {reports.map((rep) => {
+                  const isExpanded = expandedReportId === rep.id;
+                  return (
+                    <div
+                      key={rep.id}
+                      className="rounded-3 border border-secondary p-3"
+                      style={{ background: "rgba(10, 18, 12, 0.8)", transition: "all 0.2s ease" }}
+                    >
+                      <div
+                        className="d-flex justify-content-between align-items-center cursor-pointer"
+                        style={{ cursor: "pointer" }}
+                        onClick={() => setExpandedReportId(isExpanded ? null : rep.id)}
                       >
-                        <div className="d-flex justify-content-between align-items-center w-100 pe-3">
-                          <span>
-                            <i className="bi bi-calendar-event me-2 text-warning"></i>
-                            Relatório {rep.tipo} - {new Date(rep.criadoEm).toLocaleDateString("pt-BR")}
+                        <div className="d-flex align-items-center gap-2">
+                          <span className="fw-bold text-white" style={{ fontSize: "0.88rem" }}>
+                            Relatório {rep.tipo} — {new Date(rep.criadoEm).toLocaleDateString("pt-BR")}
                           </span>
+                        </div>
+                        <div className="d-flex align-items-center gap-2">
                           {rep.insights?.previsaoTdee && (
-                            <span className="badge bg-secondary text-warning-50 small">
+                            <span className="badge bg-dark border border-secondary text-warning" style={{ fontSize: "0.7rem" }}>
                               Est. TDEE: {rep.insights.previsaoTdee} kcal
                             </span>
                           )}
+                          <span className="text-muted small fw-bold">
+                            {isExpanded ? "▲ Fechar" : "▼ Ver Detalhes"}
+                          </span>
                         </div>
-                      </button>
-                    </h2>
-                    <div id={`rep-collapse-${rep.id}`} className="accordion-collapse collapse" data-bs-parent="#accordionReports">
-                      <div className="accordion-body p-3 border-top" style={{ borderColor: "rgba(226,201,133,0.1)" }}>
-                        <div className="text-muted small mb-3" style={{ whiteSpace: "pre-wrap", lineHeight: "1.5", fontSize: "0.85rem" }}>
-                          {rep.conteudo}
-                        </div>
-
-                        {/* Insights rápidos formatados */}
-                        {rep.insights && (
-                          <div className="row g-2 mt-2 pt-2 border-top border-secondary">
-                            <div className="col-md-6">
-                              <span className="d-block text-success small fw-bold mb-1">✓ Pontos Fortes</span>
-                              <ul className="ps-3 mb-0 text-muted small" style={{ fontSize: "0.78rem" }}>
-                                {rep.insights.pontosFortes?.map((pt, i) => (
-                                  <li key={i}>{pt}</li>
-                                ))}
-                              </ul>
-                            </div>
-                            <div className="col-md-6">
-                              <span className="d-block text-warning small fw-bold mb-1">⚠ Pontos de Melhoria</span>
-                              <ul className="ps-3 mb-0 text-muted small" style={{ fontSize: "0.78rem" }}>
-                                {rep.insights.melhorias?.map((pt, i) => (
-                                  <li key={i}>{pt}</li>
-                                ))}
-                              </ul>
-                            </div>
-                          </div>
-                        )}
                       </div>
+
+                      {/* Conteúdo Expandido do Relatório */}
+                      {isExpanded && (
+                        <div className="mt-3 pt-3 border-top border-secondary">
+                          <div className="text-white-50 small mb-3" style={{ whiteSpace: "pre-wrap", lineHeight: "1.6", fontSize: "0.85rem" }}>
+                            {rep.conteudo}
+                          </div>
+
+                          {rep.insights && (
+                            <div className="row g-3 pt-2 border-top border-secondary">
+                              <div className="col-md-6">
+                                <span className="d-block text-success small fw-bold mb-1">Pontos Fortes</span>
+                                <ul className="ps-3 mb-0 text-muted small" style={{ fontSize: "0.78rem" }}>
+                                  {rep.insights.pontosFortes?.map((pt, i) => (
+                                    <li key={i}>{pt}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                              <div className="col-md-6">
+                                <span className="d-block text-warning small fw-bold mb-1">Pontos de Melhoria</span>
+                                <ul className="ps-3 mb-0 text-muted small" style={{ fontSize: "0.78rem" }}>
+                                  {rep.insights.melhorias?.map((pt, i) => (
+                                    <li key={i}>{pt}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

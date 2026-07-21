@@ -81,6 +81,9 @@ interface SaudeClientInitialProps {
     xp_total: number;
     avatar?: string | null;
     peso?: number | null;
+    altura?: number | null;
+    idade?: number | null;
+    sexo?: string | null;
   };
   initialNutrition: Nutrition;
   workouts: Workout[];
@@ -146,6 +149,50 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
   };
 
     // Estados da Calculadora Cientifica de TDEE e Deficit Calorico (Mifflin-St Jeor)
+    const [isBiometriaOpen, setIsBiometriaOpen] = useState(false);
+  const [bioPesoInput, setBioPesoInput] = useState<string>(user.peso ? user.peso.toString() : "80");
+  const [bioAlturaInput, setBioAlturaInput] = useState<string>(user.altura ? user.altura.toString() : "175");
+  const [bioIdadeInput, setBioIdadeInput] = useState<string>(user.idade ? user.idade.toString() : "25");
+  const [bioSexoInput, setBioSexoInput] = useState<string>(user.sexo || "M");
+
+  const handleUpdateBiometria = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    try {
+      const formData = new FormData();
+      formData.append("peso", bioPesoInput);
+      formData.append("altura", bioAlturaInput);
+      formData.append("idade", bioIdadeInput);
+      formData.append("sexo", bioSexoInput);
+
+      const res = await fetch("/saude/peso/atualizar", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        const newP = parseFloat(bioPesoInput) || 80;
+        const newA = parseFloat(bioAlturaInput) || 175;
+        const newI = parseInt(bioIdadeInput) || 25;
+        setPeso(newP);
+        setCalcPeso(newP);
+        setCalcAltura(newA);
+        setCalcIdade(newI);
+        setCalcSexo(bioSexoInput as "M" | "F");
+        setIsBiometriaOpen(false);
+
+        if (typeof window !== "undefined" && (window as any).AscendSFX) {
+          (window as any).AscendSFX.playSuccess();
+        }
+        alert("Perfil biométrico (Peso, Altura, Idade) atualizado com sucesso!");
+      } else {
+        alert("Erro ao atualizar biometria: " + data.message);
+      }
+    } catch (err: any) {
+      alert("Erro ao conectar: " + err.message);
+    }
+  };
+
   const [isCalculadoraOpen, setIsCalculadoraOpen] = useState(false);
   const [calcSexo, setCalcSexo] = useState<"M" | "F">("M");
   const [calcIdade, setCalcIdade] = useState<string | number>(25);
@@ -2105,6 +2152,111 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
                   </button>
                   <button type="submit" className="btn btn-ascend">
                     Cadastrar Planejamento
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Atualizacao do Perfil Biometrico (Peso, Altura, Idade, Sexo) */}
+      {isBiometriaOpen && (
+        <div className="modal fade show" style={{ display: "block", backgroundColor: "rgba(0,0,0,0.75)" }} tabIndex={-1} aria-hidden="true">
+          <div className="modal-dialog modal-dialog-centered">
+            <div
+              className="modal-content"
+              style={{ background: "#09120c", border: "1px solid rgba(212, 175, 55, 0.35)", borderRadius: "24px", boxShadow: "0 20px 60px rgba(0,0,0,0.85)" }}
+            >
+              <div className="modal-header border-bottom border-secondary px-4 pt-4">
+                <div>
+                  <h4 className="modal-title text-white fw-bold mb-0">Meu Perfil Biométrico</h4>
+                  <span className="text-muted small">Defina seus dados reais para cálculo exato de TMB e Déficit</span>
+                </div>
+                <button
+                  type="button"
+                  className="btn-close btn-close-white"
+                  onClick={() => setIsBiometriaOpen(false)}
+                  aria-label="Close"
+                ></button>
+              </div>
+
+              <form onSubmit={handleUpdateBiometria}>
+                <div className="modal-body px-4 py-3">
+                  {/* Sexo Biológico */}
+                  <div className="mb-3">
+                    <label className="form-label text-muted small fw-bold mb-1">Sexo Biológico</label>
+                    <div className="d-flex gap-3">
+                      <button
+                        type="button"
+                        className={`btn btn-sm flex-fill ${bioSexoInput === "M" ? "btn-warning text-dark fw-bold" : "btn-outline-secondary text-white"}`}
+                        onClick={() => setBioSexoInput("M")}
+                      >
+                        Masculino
+                      </button>
+                      <button
+                        type="button"
+                        className={`btn btn-sm flex-fill ${bioSexoInput === "F" ? "btn-warning text-dark fw-bold" : "btn-outline-secondary text-white"}`}
+                        onClick={() => setBioSexoInput("F")}
+                      >
+                        Feminino
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Peso, Altura, Idade */}
+                  <div className="row g-3 mb-3">
+                    <div className="col-4">
+                      <label className="form-label text-muted small fw-bold mb-1">Peso (kg)</label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        className="form-control bg-dark text-white border-secondary text-center"
+                        value={bioPesoInput}
+                        onChange={(e) => setBioPesoInput(e.target.value)}
+                        placeholder="Ex: 75.5"
+                        required
+                      />
+                    </div>
+                    <div className="col-4">
+                      <label className="form-label text-muted small fw-bold mb-1">Altura (cm)</label>
+                      <input
+                        type="number"
+                        className="form-control bg-dark text-white border-secondary text-center"
+                        value={bioAlturaInput}
+                        onChange={(e) => setBioAlturaInput(e.target.value)}
+                        placeholder="Ex: 178"
+                        required
+                      />
+                    </div>
+                    <div className="col-4">
+                      <label className="form-label text-muted small fw-bold mb-1">Idade (anos)</label>
+                      <input
+                        type="number"
+                        className="form-control bg-dark text-white border-secondary text-center"
+                        value={bioIdadeInput}
+                        onChange={(e) => setBioIdadeInput(e.target.value)}
+                        placeholder="Ex: 28"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 rounded bg-dark border border-secondary text-muted small" style={{ fontSize: "0.75rem" }}>
+                    💡 Seus dados biométricos são usados exclusivamente para calcular seu Metabolismo Basal (TMB) e Déficit Calórico com precisão clínica.
+                  </div>
+                </div>
+
+                <div className="modal-footer border-0 px-4 pb-4">
+                  <button
+                    type="button"
+                    className="btn btn-secondary rounded-pill px-4"
+                    onClick={() => setIsBiometriaOpen(false)}
+                  >
+                    Cancelar
+                  </button>
+                  <button type="submit" className="btn btn-ascend px-4 fw-bold">
+                    Salvar Meu Perfil Biométrico
                   </button>
                 </div>
               </form>

@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { WeightSchema } from "@/lib/schemas";
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,21 +13,26 @@ export async function POST(req: NextRequest) {
 
     const formData = await req.formData();
     const peso = parseFloat(formData.get("peso") as string || "0");
+    const altura = parseFloat(formData.get("altura") as string || "0");
+    const idade = parseInt(formData.get("idade") as string || "0", 10);
+    const sexo = (formData.get("sexo") as string || "M").toUpperCase();
 
-    // Validação estrita via Zod
-    const validation = WeightSchema.safeParse({ peso });
-    if (!validation.success) {
-      const errorMsg = validation.error.errors.map((e) => e.message).join(", ");
-      return NextResponse.json({ success: false, message: "Erro de validação: " + errorMsg }, { status: 400 });
+    if (!peso || peso <= 0 || peso > 400) {
+      return NextResponse.json({ success: false, message: "Por favor, digite um peso válido." }, { status: 400 });
     }
 
-    // Atualiza o peso do usuário
+    const updateData: any = { peso };
+    if (altura > 0) updateData.altura = altura;
+    if (idade > 0) updateData.idade = idade;
+    if (sexo) updateData.sexo = sexo;
+
+    // Atualiza biometria do usuário
     await prisma.users.update({
       where: { id: userId },
-      data: { peso: peso },
+      data: updateData,
     });
 
-    // Registrar também no histórico de pesos
+    // Registrar no histórico de pesos
     await prisma.weightHistory.create({
       data: {
         userId: userId,
@@ -36,7 +40,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    return NextResponse.json({ success: true, peso: peso });
+    return NextResponse.json({ success: true, peso, altura, idade, sexo });
   } catch (error: any) {
     return NextResponse.json({ success: false, message: error.message }, { status: 400 });
   }

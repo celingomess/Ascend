@@ -168,7 +168,10 @@ export default async function SaudePage() {
         nivel: user.nivel || 1,
         xp_total: user.xp_total || 0,
         avatar: user.avatar,
-        peso: user.peso || 80
+        peso: user.peso || 80,
+        altura: user.altura || 175,
+        idade: user.idade || 25,
+        sexo: user.sexo || "M",
       }}
       initialNutrition={{
         id: nutrition.id,

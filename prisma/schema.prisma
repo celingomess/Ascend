@@ -174,6 +174,9 @@ model users {
   melhor_streak    Int?
   ultima_atividade DateTime? @db.Date
   peso             Float?    @db.Float
+  altura           Float?    @db.Float
+  idade            Int?
+  sexo             String?   @db.VarChar(10)
 }
 
 model workout_exercises {

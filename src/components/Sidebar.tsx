@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { signOut } from "next-auth/react";
 import {
   Home,
   Compass,
@@ -38,64 +39,61 @@ export const Sidebar: React.FC<SidebarProps> = ({ user }) => {
     { name: "Saúde", path: "/saude", icon: () => <HeartPulse size={20} /> },
     { name: "Finanças", path: "/financas", icon: () => <span className="bi bi-bank" style={{ fontSize: "1.2rem", color: "inherit" }} /> },
     { name: "Legado", path: "/conquistas", icon: () => <Award size={20} /> },
-    { name: "Hall", path: "/hall", icon: () => <Gem size={20} /> },
-    { name: "Ascensão", path: "/ascensao", icon: () => <TrendingUp size={20} /> },
+    { name: "Ascensão", path: "/ascensao", icon: () => <Gem size={20} /> },
+    { name: "Hall", path: "/hall", icon: () => <TrendingUp size={20} /> },
     { name: "Perfil", path: "/perfil", icon: () => <User size={20} /> },
   ];
 
   return (
-    <aside className="ascend-sidebar d-none d-md-flex">
-      <div className="sidebar-top">
-        {/* Logo */}
-        <Link href="/dashboard" className="sidebar-logo">
-          <div className="logo-icon">A</div>
-          <div className="logo-text">
-            <span className="logo-title">ASCEND</span>
-            <span className="logo-subtitle">EVOLUÇÃO PESSOAL</span>
-          </div>
-        </Link>
+    <aside className="ascend-sidebar">
+      <div>
+        {/* Brand */}
+        <div className="sidebar-brand">
+          <h1>ASCEND OS</h1>
+          <p>SISTEMA OPERACIONAL PESSOAL</p>
+        </div>
 
-        {/* Perfil no Topo */}
-        <div className="sidebar-profile">
-          <div className="sidebar-avatar">
+        {/* User Card */}
+        <div className="sidebar-user-card">
+          <div className="user-avatar-wrapper position-relative">
             {user.avatar ? (
               <img
-                src={`/uploads/${user.avatar}`}
+                src={user.avatar}
                 alt={user.nome}
+                className="user-avatar img-fluid"
+                style={{ width: "42px", height: "42px", borderRadius: "50%", objectFit: "cover" }}
               />
             ) : (
-              <div className="avatar-placeholder">
-                {user.nome.charAt(0).toUpperCase()}
+              <div className="user-avatar-placeholder d-flex align-items-center justify-content-center fw-bold bg-dark text-warning border border-secondary" style={{ width: "42px", height: "42px", borderRadius: "50%" }}>
+                {user.nome ? user.nome.charAt(0).toUpperCase() : "U"}
               </div>
             )}
           </div>
-          <div className="sidebar-rank text-center">
-            {pathname === "/perfil" ? "Perfil" : "Despertar"}
-          </div>
-          <div className="sidebar-profile-name text-center">
-            {user.nome}
-          </div>
-          <div className="sidebar-profile-level text-center">
-            Nível {user.nivel}
-          </div>
-
-          {/* Progresso de Nível */}
-          <div className="sidebar-profile-progress mt-2">
-            <div className="progress" style={{ height: "6px" }}>
-              <div
-                className="progress-bar"
-                role="progressbar"
-                style={{ width: `${percentualEvolucao}%`, background: "var(--gold)" }}
-                aria-valuenow={percentualEvolucao}
-                aria-valuemin={0}
-                aria-valuemax={100}
-              />
-            </div>
-            <small className="text-muted d-block text-center mt-1">{percentualEvolucao}% evolução geral</small>
+          <div className="user-info overflow-hidden">
+            <span className="user-name text-truncate d-block text-white fw-bold">{user.nome}</span>
+            <span className="user-level text-warning small fw-semibold">Nível {user.nivel}</span>
           </div>
         </div>
 
-        {/* Navegação */}
+        {/* XP Progress Bar */}
+        <div className="sidebar-xp-container px-3 mb-3">
+          <div className="d-flex justify-content-between align-items-center mb-1 style-xp-text" style={{ fontSize: "0.7rem" }}>
+            <span className="text-muted fw-semibold">XP no Nível</span>
+            <span className="text-warning fw-bold">{xpNivelAtual} / 500 XP</span>
+          </div>
+          <div className="progress" style={{ height: "4px", background: "rgba(255,255,255,0.06)", borderRadius: "2px" }}>
+            <div
+              className="progress-bar bg-warning"
+              role="progressbar"
+              style={{ width: `${percentualEvolucao}%`, transition: "width 0.4s ease" }}
+              aria-valuenow={percentualEvolucao}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            />
+          </div>
+        </div>
+
+        {/* Navigation */}
         <nav className="sidebar-nav">
           {menuItems.map((item) => {
             const isActive = pathname === item.path || pathname?.startsWith(item.path + "/");
@@ -116,10 +114,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ user }) => {
 
       {/* Sair */}
       <div className="sidebar-bottom">
-        <Link href="/auth/logout" className="sidebar-item text-danger">
+        <button
+          type="button"
+          onClick={() => signOut({ callbackUrl: "/login" })}
+          className="sidebar-item text-danger border-0 bg-transparent w-100 text-start"
+          style={{ cursor: "pointer" }}
+        >
           <LogOut size={20} />
           <span>Sair</span>
-        </Link>
+        </button>
       </div>
     </aside>
   );

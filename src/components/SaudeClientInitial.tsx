@@ -1107,13 +1107,22 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
           </span>
           <h2 className="ascend-title mb-0" style={{ fontSize: "1.8rem" }}>Dashboard Geral</h2>
         </div>
-        <div className="d-flex gap-2">
+        <div className="d-flex gap-2 flex-wrap">
           <button
             type="button"
-            className="btn btn-ascend"
-            onClick={() => setIsNovoTreinoOpen(true)}
+            className="btn btn-outline-warning border-secondary text-warning fw-bold px-3.5"
+            onClick={() => setIsBiometriaOpen(true)}
+            style={{ borderRadius: "12px", letterSpacing: "0.5px" }}
           >
-            <i className="bi bi-plus-lg"></i> Novo Treino
+            Alterar Meus Dados (Peso/Altura)
+          </button>
+          <button
+            type="button"
+            className="btn btn-ascend px-3.5"
+            onClick={() => setIsNovoTreinoOpen(true)}
+            style={{ borderRadius: "12px" }}
+          >
+            Novo Treino
           </button>
         </div>
       </div>
@@ -1489,17 +1498,24 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
                 </h3>
                 <span className="text-muted small">Balanço de Nutrientes & Calorias</span>
               </div>
-              <div className="d-flex gap-2">
+              <div className="d-flex gap-2 flex-wrap justify-content-end">
                 <button
                   type="button"
-                  className="btn btn-xs btn-ascend px-3 fw-bold"
+                  className="btn btn-xs btn-outline-warning text-warning fw-bold px-2.5"
+                  onClick={() => setIsBiometriaOpen(true)}
+                >
+                  Alterar Peso ({peso || user.peso || 80}kg)
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-xs btn-ascend px-2.5 fw-bold"
                   onClick={() => setIsCalculadoraOpen(true)}
                 >
                   Calculadora de Déficit
                 </button>
                 <button
                   type="button"
-                  className="btn btn-xs btn-ascend-outline px-3"
+                  className="btn btn-xs btn-ascend-outline px-2.5"
                   onClick={() => setIsConfigMetaOpen(true)}
                 >
                   Configurar Meta

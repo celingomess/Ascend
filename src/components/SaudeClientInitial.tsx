@@ -1472,6 +1472,38 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
                 </div>
               )}
 
+              {/* Atalhos de Refeicoes Pre-Configuradas */}
+              <div className="d-flex gap-1.5 overflow-auto pb-2 mb-2" style={{ scrollbarWidth: "none" }}>
+                <button
+                  type="button"
+                  className="btn btn-xs btn-outline-warning text-nowrap rounded-pill"
+                  onClick={() => { setCaloriesInput("250"); setProteinInput("18"); setCarbsInput("2"); setFatInput("20"); }}
+                >
+                  🥚 3 Ovos (250kcal)
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-xs btn-outline-warning text-nowrap rounded-pill"
+                  onClick={() => { setCaloriesInput("330"); setProteinInput("62"); setCarbsInput("0"); setFatInput("7"); }}
+                >
+                  🍗 Frango 200g (330kcal)
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-xs btn-outline-warning text-nowrap rounded-pill"
+                  onClick={() => { setCaloriesInput("280"); setProteinInput("8"); setCarbsInput("50"); setFatInput("4"); }}
+                >
+                  🍚 Arroz & Feijão (280kcal)
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-xs btn-outline-warning text-nowrap rounded-pill"
+                  onClick={() => { setCaloriesInput("120"); setProteinInput("24"); setCarbsInput("3"); setFatInput("1"); }}
+                >
+                  🥤 Whey Protein (120kcal)
+                </button>
+              </div>
+
               {/* Form de macro inputs controlado */}
               <form onSubmit={handleQuickAdd}>
                 <div className="row g-2 mb-3">

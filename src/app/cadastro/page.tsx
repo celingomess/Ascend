@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { registerUserAction } from "@/app/cadastro/actions";
+import LogoAscend from "@/components/LogoAscend";
 
 export default function CadastroPage() {
   const [error, setError] = useState<string | null>(null);
@@ -32,11 +33,7 @@ export default function CadastroPage() {
       <div className="card text-white border border-secondary p-4 rounded-4 shadow-lg w-100 fade-in-up" style={{ maxWidth: "450px", background: "rgba(7,17,12,0.85)", backdropFilter: "blur(8px)" }}>
         <div className="text-center mb-4">
           <div className="d-flex justify-content-center mb-1">
-            <img
-              src="/images/logo-ascend.svg"
-              alt="Ascend OS Logo"
-              style={{ height: "72px", width: "auto" }}
-            />
+            <LogoAscend height={76} />
           </div>
           <h2 className="ascend-title text-warning fs-3 mb-1" style={{ color: "var(--gold)" }}>Criar Conta</h2>
           <p className="text-muted small">Junte-se à jornada de evolução do Ascend OS</p>

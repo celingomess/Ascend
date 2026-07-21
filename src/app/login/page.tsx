@@ -4,6 +4,7 @@ import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
+import LogoAscend from "@/components/LogoAscend";
 
 function LoginForm() {
   const [error, setError] = useState<string | null>(null);
@@ -101,11 +102,7 @@ export default function LoginPage() {
       <div className="card text-white border border-secondary p-4 rounded-4 shadow-lg w-100 fade-in-up" style={{ maxWidth: "450px", background: "rgba(7,17,12,0.85)", backdropFilter: "blur(8px)" }}>
         <div className="text-center mb-4">
           <div className="d-flex justify-content-center mb-1">
-            <img
-              src="/images/logo-ascend.svg"
-              alt="Ascend OS Logo"
-              style={{ height: "72px", width: "auto" }}
-            />
+            <LogoAscend height={76} />
           </div>
           <h2 className="ascend-title text-warning fs-3 mb-1" style={{ color: "var(--gold)" }}>Entrar</h2>
           <p className="text-muted small">Gerencie seu legado e evolução diária</p>

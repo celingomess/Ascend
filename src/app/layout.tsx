@@ -5,7 +5,9 @@ import MobileBottomNav from "@/components/MobileBottomNav";
 import { LevelUpProvider } from "@/components/LevelUpContext";
 import AiCopilotDrawer from "@/components/AiCopilotDrawer";
 
-// Importar estilos globais
+// Importar estilos globais e Bootstrap local
+import "bootstrap/dist/css/bootstrap.min.css";
+import "bootstrap-icons/font/bootstrap-icons.css";
 import "../styles/style.css";
 import "../styles/sidebar.css";
 
@@ -48,16 +50,6 @@ export default async function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="Ascend" />
         <link rel="apple-touch-icon" href="/images/logo-ascend.svg" />
-
-        {/* Bootstrap CSS e Icons */}
-        <link
-          href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-          rel="stylesheet"
-        />
-        <link
-          rel="stylesheet"
-          href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
-        />
         {/* Google Fonts */}
         <link
           href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap"

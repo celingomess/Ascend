@@ -100,7 +100,13 @@ export default function LoginPage() {
     <div className="container d-flex align-items-center justify-content-center min-vh-100 py-5">
       <div className="card text-white border border-secondary p-4 rounded-4 shadow-lg w-100 fade-in-up" style={{ maxWidth: "450px", background: "rgba(7,17,12,0.85)", backdropFilter: "blur(8px)" }}>
         <div className="text-center mb-4">
-          <div className="logo-icon bg-warning text-dark d-inline-flex align-items-center justify-content-center rounded-circle fs-3 fw-bold mb-2" style={{ width: "50px", height: "50px", background: "var(--gold-soft)", fontFamily: "'Cormorant Garamond', serif" }}>A</div>
+          <div className="d-flex justify-content-center mb-1">
+            <img
+              src="/images/logo-ascend.svg"
+              alt="Ascend OS Logo"
+              style={{ height: "72px", width: "auto" }}
+            />
+          </div>
           <h2 className="ascend-title text-warning fs-3 mb-1" style={{ color: "var(--gold)" }}>Entrar</h2>
           <p className="text-muted small">Gerencie seu legado e evolução diária</p>
         </div>

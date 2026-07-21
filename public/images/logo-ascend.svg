@@ -1,15 +1,21 @@
-<svg class="ascend-logo-svg" viewBox="0 0 500 300">
-
-    <!-- Estrutura principal -->
-
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 300" width="100%" height="100%">
+    <!-- Estrutura principal do A da Ascend -->
     <path
-        class="logo-line"
-        d="M180 230 L250 70 L320 230" />
-
-    <!-- Traço ascendente -->
-
+        d="M180 230 L250 70 L320 230"
+        fill="none"
+        stroke="#c7a35a"
+        stroke-width="14"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        filter="drop-shadow(0 0 8px rgba(199,163,90,0.4))"
+    />
+    <!-- Traço ascendente dinâmico -->
     <path
-        class="logo-accent"
-        d="M165 220 C220 175, 280 155, 340 120" />
-
+        d="M165 220 C220 175, 280 155, 340 120"
+        fill="none"
+        stroke="#e2c985"
+        stroke-width="9"
+        stroke-linecap="round"
+        filter="drop-shadow(0 0 10px rgba(226,201,133,0.6))"
+    />
 </svg>

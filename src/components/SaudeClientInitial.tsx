@@ -1303,28 +1303,32 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
         {/* COLUNA DIREITA (Monitoramento Diário e Treinos) */}
         <div className="col-lg-5 col-md-12">
           
-          {/* Foco Nutricional com Concentric SVG Activity Rings */}
-          <div className="glass-card p-4 mb-4">
+          {/* Foco Nutricional Executivo sem Icones */}
+          <div className="glass-card p-4 mb-4 position-relative">
             <div className="d-flex justify-content-between align-items-center mb-3">
-              <h3 className="ascend-title mb-0" style={{ fontSize: "1.2rem", color: "var(--cream)" }}>
-                Ingestão Diária
-              </h3>
+              <div>
+                <h3 className="ascend-title mb-0" style={{ fontSize: "1.25rem", color: "var(--cream)" }}>
+                  Ingestão Diária
+                </h3>
+                <span className="text-muted small">Balanço de Nutrientes & Calorias</span>
+              </div>
               <button
-                className="btn btn-sm btn-ascend-outline"
+                type="button"
+                className="btn btn-xs btn-ascend-outline px-3"
                 onClick={() => setIsConfigMetaOpen(true)}
               >
-                <i className="bi bi-gear"></i> Meta
+                Configurar Meta
               </button>
             </div>
 
-            {/* Concentric rings SVG display */}
+            {/* Concentric Activity Rings & Exibição de Calorias */}
             <div className="d-flex align-items-center justify-content-center gap-4 flex-wrap mb-4">
               <div
                 className="position-relative d-flex align-items-center justify-content-center"
                 style={{ width: "160px", height: "160px" }}
               >
                 <svg className="calorie-ring-svg" width="160" height="160" viewBox="0 0 160 160">
-                  {/* Circle 1: Calories (r=65, cx=80, cy=80) -> circumference = 408.4 */}
+                  {/* Circle 1: Calorias */}
                   <circle className="ring-macro-bg" cx="80" cy="80" r="65" />
                   <circle
                     className="ring-macro-active"
@@ -1338,7 +1342,7 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
                     }}
                   />
                   
-                  {/* Circle 2: Protein (r=51, cx=80, cy=80) -> circumference = 320.4 */}
+                  {/* Circle 2: Proteínas */}
                   <circle className="ring-macro-bg" cx="80" cy="80" r="51" />
                   <circle
                     className="ring-macro-active"
@@ -1352,7 +1356,7 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
                     }}
                   />
 
-                  {/* Circle 3: Carbs (r=37, cx=80, cy=80) -> circumference = 232.5 */}
+                  {/* Circle 3: Carboidratos */}
                   <circle className="ring-macro-bg" cx="80" cy="80" r="37" />
                   <circle
                     className="ring-macro-active"
@@ -1366,7 +1370,7 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
                     }}
                   />
 
-                  {/* Circle 4: Fat (r=23, cx=80, cy=80) -> circumference = 144.5 */}
+                  {/* Circle 4: Gorduras */}
                   <circle className="ring-macro-bg" cx="80" cy="80" r="23" />
                   <circle
                     className="ring-macro-active"
@@ -1386,70 +1390,61 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
                   className="text-center position-absolute"
                   style={{ top: "50%", left: "50%", transform: "translate(-50%, -50%)" }}
                 >
-                  <strong className="d-block gold-text" style={{ fontSize: "1.1rem" }}>
+                  <strong className="d-block gold-text" style={{ fontSize: "1.25rem", letterSpacing: "0.5px" }}>
                     {nutrition.calorias_consumidas || 0}
                   </strong>
-                  <span className="text-muted" style={{ fontSize: "0.62rem" }}>
+                  <span className="text-muted fw-bold" style={{ fontSize: "0.65rem", letterSpacing: "0.5px" }}>
                     / {nutrition.calorias_meta || 2000} kcal
                   </span>
                 </div>
               </div>
 
-              {/* Legenda dos Macros com porcentagens e cores */}
+              {/* Legenda Tipográfica Limpa dos Macros */}
               <div className="flex-grow-1" style={{ minWidth: "150px" }}>
                 {/* Proteína */}
                 <div className="mb-2">
-                  <div className="d-flex justify-content-between mb-0.5" style={{ fontSize: "0.78rem" }}>
-                    <span className="text-muted">
-                      <span className="macro-dot" style={{ background: "#2ec4b6" }} />
-                      Proteínas
-                    </span>
-                    <strong>{nutrition.proteina || 0}g / {proteinTarget}g</strong>
+                  <div className="d-flex justify-content-between mb-1" style={{ fontSize: "0.78rem" }}>
+                    <span className="text-muted fw-bold">Proteínas</span>
+                    <strong className="text-white">{nutrition.proteina || 0}g / {proteinTarget}g</strong>
                   </div>
-                  <div className="progress" style={{ height: "4px", background: "rgba(255,255,255,0.03)" }}>
+                  <div className="progress" style={{ height: "5px", background: "rgba(255,255,255,0.04)" }}>
                     <div className="progress-bar" style={{ background: "#2ec4b6", width: `${Math.min(((nutrition.proteina || 0) / proteinTarget) * 100, 100)}%` }}></div>
                   </div>
                 </div>
 
                 {/* Carboidratos */}
                 <div className="mb-2">
-                  <div className="d-flex justify-content-between mb-0.5" style={{ fontSize: "0.78rem" }}>
-                    <span className="text-muted">
-                      <span className="macro-dot" style={{ background: "#4b88be" }} />
-                      Carbos
-                    </span>
-                    <strong>{nutrition.carboidrato || 0}g / {carbTarget}g</strong>
+                  <div className="d-flex justify-content-between mb-1" style={{ fontSize: "0.78rem" }}>
+                    <span className="text-muted fw-bold">Carboidratos</span>
+                    <strong className="text-white">{nutrition.carboidrato || 0}g / {carbTarget}g</strong>
                   </div>
-                  <div className="progress" style={{ height: "4px", background: "rgba(255,255,255,0.03)" }}>
+                  <div className="progress" style={{ height: "5px", background: "rgba(255,255,255,0.04)" }}>
                     <div className="progress-bar" style={{ background: "#4b88be", width: `${Math.min(((nutrition.carboidrato || 0) / carbTarget) * 100, 100)}%` }}></div>
                   </div>
                 </div>
 
                 {/* Gorduras */}
                 <div>
-                  <div className="d-flex justify-content-between mb-0.5" style={{ fontSize: "0.78rem" }}>
-                    <span className="text-muted">
-                      <span className="macro-dot" style={{ background: "#e76f51" }} />
-                      Gorduras
-                    </span>
-                    <strong>{nutrition.gordura || 0}g / {fatTarget}g</strong>
+                  <div className="d-flex justify-content-between mb-1" style={{ fontSize: "0.78rem" }}>
+                    <span className="text-muted fw-bold">Gorduras</span>
+                    <strong className="text-white">{nutrition.gordura || 0}g / {fatTarget}g</strong>
                   </div>
-                  <div className="progress" style={{ height: "4px", background: "rgba(255,255,255,0.03)" }}>
+                  <div className="progress" style={{ height: "5px", background: "rgba(255,255,255,0.04)" }}>
                     <div className="progress-bar" style={{ background: "#e76f51", width: `${Math.min(((nutrition.gordura || 0) / fatTarget) * 100, 100)}%` }}></div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Quick logger form (Express com IA) */}
+            {/* Seção de Registro sem Icones */}
             <div className="pt-3 border-top border-secondary">
-              <span className="d-block text-muted small fw-bold mb-2" style={{ fontSize: "0.7rem", letterSpacing: "0.5px" }}>
-                REGISTRO RÁPIDO COM IA
+              <span className="d-block text-muted small fw-bold mb-2" style={{ fontSize: "0.7rem", letterSpacing: "1px" }}>
+                ANÁLISE DE REFEIÇÃO COM IA
               </span>
               <div className="input-group mb-2">
                 <input
                   type="text"
-                  className="form-control bg-transparent text-white border-secondary small"
+                  className="form-control bg-dark text-white border-secondary small"
                   placeholder="Ex: 3 ovos mexidos com 2 fatias de pão integral"
                   value={expressInput}
                   onChange={(e) => setExpressInput(e.target.value)}
@@ -1457,12 +1452,12 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
                   style={{ fontSize: "0.85rem" }}
                 />
                 <button
-                  className="btn btn-outline-warning border-secondary text-warning"
+                  className="btn btn-ascend px-3 fw-bold"
                   type="button"
                   onClick={handleExpressMealParse}
                   disabled={isExpressLoading}
                 >
-                  {isExpressLoading ? <span className="spinner-border spinner-border-sm" /> : <i className="bi bi-magic" />}
+                  {isExpressLoading ? "Analisando..." : "Analisar com IA"}
                 </button>
               </div>
 
@@ -1472,76 +1467,76 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
                 </div>
               )}
 
-              {/* Atalhos de Refeicoes Pre-Configuradas */}
-              <div className="d-flex gap-1.5 overflow-auto pb-2 mb-2" style={{ scrollbarWidth: "none" }}>
+              {/* Atalhos Rápidos com Tipografia Limpa sem Emojis/Icones */}
+              <div className="d-flex gap-1.5 overflow-auto pb-2 mb-3" style={{ scrollbarWidth: "none" }}>
                 <button
                   type="button"
-                  className="btn btn-xs btn-outline-warning text-nowrap rounded-pill"
+                  className="btn btn-xs btn-ascend-outline text-nowrap rounded-pill px-3"
                   onClick={() => { setCaloriesInput("250"); setProteinInput("18"); setCarbsInput("2"); setFatInput("20"); }}
                 >
-                  🥚 3 Ovos (250kcal)
+                  3 Ovos Mexidos (250 kcal)
                 </button>
                 <button
                   type="button"
-                  className="btn btn-xs btn-outline-warning text-nowrap rounded-pill"
+                  className="btn btn-xs btn-ascend-outline text-nowrap rounded-pill px-3"
                   onClick={() => { setCaloriesInput("330"); setProteinInput("62"); setCarbsInput("0"); setFatInput("7"); }}
                 >
-                  🍗 Frango 200g (330kcal)
+                  Peito de Frango 200g (330 kcal)
                 </button>
                 <button
                   type="button"
-                  className="btn btn-xs btn-outline-warning text-nowrap rounded-pill"
+                  className="btn btn-xs btn-ascend-outline text-nowrap rounded-pill px-3"
                   onClick={() => { setCaloriesInput("280"); setProteinInput("8"); setCarbsInput("50"); setFatInput("4"); }}
                 >
-                  🍚 Arroz & Feijão (280kcal)
+                  Arroz com Feijão (280 kcal)
                 </button>
                 <button
                   type="button"
-                  className="btn btn-xs btn-outline-warning text-nowrap rounded-pill"
+                  className="btn btn-xs btn-ascend-outline text-nowrap rounded-pill px-3"
                   onClick={() => { setCaloriesInput("120"); setProteinInput("24"); setCarbsInput("3"); setFatInput("1"); }}
                 >
-                  🥤 Whey Protein (120kcal)
+                  Whey Protein (120 kcal)
                 </button>
               </div>
 
-              {/* Form de macro inputs controlado */}
+              {/* Form de Lançamento Manual Limpo */}
               <form onSubmit={handleQuickAdd}>
                 <div className="row g-2 mb-3">
                   <div className="col-3">
-                    <label className="form-label text-muted small mb-0.5">Kcal</label>
+                    <label className="form-label text-muted small mb-1 fw-bold" style={{ fontSize: "0.72rem" }}>Kcal</label>
                     <input
                       type="number"
-                      className="form-control bg-transparent text-white border-secondary text-center form-control-sm"
+                      className="form-control bg-dark text-white border-secondary text-center form-control-sm"
                       value={caloriesInput}
                       onChange={(e) => setCaloriesInput(e.target.value)}
                       required
                     />
                   </div>
                   <div className="col-3">
-                    <label className="form-label text-muted small mb-0.5">Prot(g)</label>
+                    <label className="form-label text-muted small mb-1 fw-bold" style={{ fontSize: "0.72rem" }}>Proteínas (g)</label>
                     <input
                       type="number"
-                      className="form-control bg-transparent text-white border-secondary text-center form-control-sm"
+                      className="form-control bg-dark text-white border-secondary text-center form-control-sm"
                       value={proteinInput}
                       onChange={(e) => setProteinInput(e.target.value)}
                       required
                     />
                   </div>
                   <div className="col-3">
-                    <label className="form-label text-muted small mb-0.5">Carb(g)</label>
+                    <label className="form-label text-muted small mb-1 fw-bold" style={{ fontSize: "0.72rem" }}>Carbos (g)</label>
                     <input
                       type="number"
-                      className="form-control bg-transparent text-white border-secondary text-center form-control-sm"
+                      className="form-control bg-dark text-white border-secondary text-center form-control-sm"
                       value={carbsInput}
                       onChange={(e) => setCarbsInput(e.target.value)}
                       required
                     />
                   </div>
                   <div className="col-3">
-                    <label className="form-label text-muted small mb-0.5">Gord(g)</label>
+                    <label className="form-label text-muted small mb-1 fw-bold" style={{ fontSize: "0.72rem" }}>Gorduras (g)</label>
                     <input
                       type="number"
-                      className="form-control bg-transparent text-white border-secondary text-center form-control-sm"
+                      className="form-control bg-dark text-white border-secondary text-center form-control-sm"
                       value={fatInput}
                       onChange={(e) => setFatInput(e.target.value)}
                       required
@@ -1549,8 +1544,8 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
                   </div>
                 </div>
 
-                <button type="submit" className="btn btn-xs btn-ascend w-100">
-                  <i className="bi bi-plus-lg me-1"></i> Registrar Alimentos
+                <button type="submit" className="btn btn-xs btn-ascend w-100 py-2 fw-bold">
+                  Salvar Refeição
                 </button>
               </form>
             </div>

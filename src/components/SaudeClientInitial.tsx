@@ -148,26 +148,31 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
     // Estados da Calculadora Cientifica de TDEE e Deficit Calorico (Mifflin-St Jeor)
   const [isCalculadoraOpen, setIsCalculadoraOpen] = useState(false);
   const [calcSexo, setCalcSexo] = useState<"M" | "F">("M");
-  const [calcIdade, setCalcIdade] = useState<number>(25);
-  const [calcPeso, setCalcPeso] = useState<number>(user.peso || 80);
-  const [calcAltura, setCalcAltura] = useState<number>(175);
+  const [calcIdade, setCalcIdade] = useState<string | number>(25);
+  const [calcPeso, setCalcPeso] = useState<string | number>(user.peso || 80);
+  const [calcAltura, setCalcAltura] = useState<string | number>(175);
   const [calcFatorAtividade, setCalcFatorAtividade] = useState<number>(1.375);
-  const [calcGastoTreino, setCalcGastoTreino] = useState<number>(250);
+  const [calcGastoTreino, setCalcGastoTreino] = useState<string | number>(250);
   const [calcObjetivo, setCalcObjetivo] = useState<number>(-0.20);
 
   // Calculo Dinamico da Taxa Metabolica Basal (TMB)
+  const numPeso = typeof calcPeso === "number" ? calcPeso : parseFloat(calcPeso) || 80;
+  const numAltura = typeof calcAltura === "number" ? calcAltura : parseFloat(calcAltura) || 175;
+  const numIdade = typeof calcIdade === "number" ? calcIdade : parseInt(calcIdade as string) || 25;
+  const numGastoTreino = typeof calcGastoTreino === "number" ? calcGastoTreino : parseFloat(calcGastoTreino as string) || 0;
+
   const calcTMB = useMemo(() => {
     if (calcSexo === "M") {
-      return Math.round(10 * calcPeso + 6.25 * calcAltura - 5 * calcIdade + 5);
+      return Math.round(10 * numPeso + 6.25 * numAltura - 5 * numIdade + 5);
     } else {
-      return Math.round(10 * calcPeso + 6.25 * calcAltura - 5 * calcIdade - 161);
+      return Math.round(10 * numPeso + 6.25 * numAltura - 5 * numIdade - 161);
     }
-  }, [calcSexo, calcPeso, calcAltura, calcIdade]);
+  }, [calcSexo, numPeso, numAltura, numIdade]);
 
   // Gasto Energetico Total Diario (TDEE)
   const calcTDEE = useMemo(() => {
-    return Math.round(calcTMB * calcFatorAtividade + (calcGastoTreino || 0));
-  }, [calcTMB, calcFatorAtividade, calcGastoTreino]);
+    return Math.round(calcTMB * calcFatorAtividade + numGastoTreino);
+  }, [calcTMB, calcFatorAtividade, numGastoTreino]);
 
   // Meta Recomendada em Calorias
   const calcMetaCalorias = useMemo(() => {
@@ -187,12 +192,12 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
 
   // Distribuição Recomendada de Macronutrientes (Prot 2.0g/kg, Gord 0.8g/kg, Carb restante)
   const calcMacros = useMemo(() => {
-    const protG = Math.round(calcPeso * 2.0);
-    const gordG = Math.round(calcPeso * 0.8);
+    const protG = Math.round(numPeso * 2.0);
+    const gordG = Math.round(numPeso * 0.8);
     const kcalProtGord = protG * 4 + gordG * 9;
     const carbG = Math.max(0, Math.round((calcMetaCalorias - kcalProtGord) / 4));
     return { protG, gordG, carbG };
-  }, [calcPeso, calcMetaCalorias]);
+  }, [numPeso, calcMetaCalorias]);
 
   // Aplicar Meta Calculada no Ascend OS
   const handleApplyCalculatedMeta = async () => {
@@ -2114,7 +2119,7 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
                       </div>
                     </div>
 
-                    {/* Idade, Peso, Altura */}
+                    {/* Idade, Peso, Altura com Edicao Fluida */}
                     <div className="row g-2 mb-3">
                       <div className="col-4">
                         <label className="form-label text-muted small fw-bold mb-1">Idade (anos)</label>
@@ -2122,7 +2127,7 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
                           type="number"
                           className="form-control bg-dark text-white border-secondary text-center form-control-sm"
                           value={calcIdade}
-                          onChange={(e) => setCalcIdade(parseInt(e.target.value) || 25)}
+                          onChange={(e) => setCalcIdade(e.target.value)}
                         />
                       </div>
                       <div className="col-4">
@@ -2132,7 +2137,7 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
                           step="0.1"
                           className="form-control bg-dark text-white border-secondary text-center form-control-sm"
                           value={calcPeso}
-                          onChange={(e) => setCalcPeso(parseFloat(e.target.value) || 80)}
+                          onChange={(e) => setCalcPeso(e.target.value)}
                         />
                       </div>
                       <div className="col-4">
@@ -2141,7 +2146,7 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
                           type="number"
                           className="form-control bg-dark text-white border-secondary text-center form-control-sm"
                           value={calcAltura}
-                          onChange={(e) => setCalcAltura(parseInt(e.target.value) || 175)}
+                          onChange={(e) => setCalcAltura(e.target.value)}
                         />
                       </div>
                     </div>
@@ -2162,16 +2167,63 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
                       </select>
                     </div>
 
-                    {/* Gasto com Treinos Adicionais */}
+                    {/* Gasto com Treinos Adicionais com Atalhos e Guia Explicativo */}
                     <div className="mb-3">
-                      <label className="form-label text-muted small fw-bold mb-1">Gasto de Treinos Adicionais (Kcal/dia)</label>
+                      <div className="d-flex justify-content-between align-items-center mb-1">
+                        <label className="form-label text-muted small fw-bold mb-0">Gasto Estimado de Treinos (Kcal/dia)</label>
+                        <span className="text-warning fw-bold small">{numGastoTreino} kcal</span>
+                      </div>
+                      
+                      {/* Chips de Atalho de Atividades Comuns */}
+                      <div className="d-flex flex-wrap gap-1.5 mb-2">
+                        <button
+                          type="button"
+                          className={`btn btn-xs rounded-pill ${numGastoTreino === 0 ? "btn-warning text-dark fw-bold" : "btn-outline-secondary text-white"}`}
+                          onClick={() => setCalcGastoTreino(0)}
+                        >
+                          Nenhum (0 kcal)
+                        </button>
+                        <button
+                          type="button"
+                          className={`btn btn-xs rounded-pill ${numGastoTreino === 200 ? "btn-warning text-dark fw-bold" : "btn-outline-secondary text-white"}`}
+                          onClick={() => setCalcGastoTreino(200)}
+                        >
+                          Musculação Leve (200 kcal)
+                        </button>
+                        <button
+                          type="button"
+                          className={`btn btn-xs rounded-pill ${numGastoTreino === 300 ? "btn-warning text-dark fw-bold" : "btn-outline-secondary text-white"}`}
+                          onClick={() => setCalcGastoTreino(300)}
+                        >
+                          Musculação 1h (300 kcal)
+                        </button>
+                        <button
+                          type="button"
+                          className={`btn btn-xs rounded-pill ${numGastoTreino === 450 ? "btn-warning text-dark fw-bold" : "btn-outline-secondary text-white"}`}
+                          onClick={() => setCalcGastoTreino(450)}
+                        >
+                          Treino + Cardio (450 kcal)
+                        </button>
+                        <button
+                          type="button"
+                          className={`btn btn-xs rounded-pill ${numGastoTreino === 600 ? "btn-warning text-dark fw-bold" : "btn-outline-secondary text-white"}`}
+                          onClick={() => setCalcGastoTreino(600)}
+                        >
+                          Futebol / Corrida / Crossfit (600 kcal)
+                        </button>
+                      </div>
+
                       <input
                         type="number"
-                        className="form-control bg-dark text-white border-secondary form-control-sm"
+                        className="form-control bg-dark text-white border-secondary form-control-sm text-center mb-1"
                         value={calcGastoTreino}
-                        onChange={(e) => setCalcGastoTreino(parseInt(e.target.value) || 0)}
-                        placeholder="Ex: 300 kcal (Musculação + Corrida)"
+                        onChange={(e) => setCalcGastoTreino(e.target.value)}
+                        placeholder="Ou digite o valor exato gasto no seu treino"
                       />
+
+                      <div className="p-2 rounded bg-dark border border-secondary text-muted" style={{ fontSize: "0.72rem", lineHeight: "1.4" }}>
+                        Guia Rápido: Se você faz musculação convencional de 45-60 min em ritmo habitual, selecione <strong className="text-warning">250 a 300 kcal</strong>. Se não faz exercícios no dia, selecione <strong className="text-warning">0 kcal</strong>.
+                      </div>
                     </div>
 
                     {/* Estratégia de Objetivo */}

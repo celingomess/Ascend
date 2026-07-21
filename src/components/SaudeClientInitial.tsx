@@ -145,6 +145,7 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
     }
   };
 
+  const [chartTimeRange, setChartTimeRange] = useState<7 | 30 | 90>(30);
   const [hoveredPoint, setHoveredPoint] = useState<{
     x: number;
     yPeso: number;
@@ -160,7 +161,7 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
     const hoje = new Date();
     const currentWeight = user.peso || 80;
     
-    for (let i = 29; i >= 0; i--) {
+    for (let i = chartTimeRange - 1; i >= 0; i--) {
       const d = new Date();
       d.setDate(hoje.getDate() - i);
       const dateStr = d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
@@ -187,9 +188,28 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
       });
     }
     return dataPoints;
-  }, [initialWeights, initialLoadHistory, user.peso]);
+  }, [initialWeights, initialLoadHistory, user.peso, chartTimeRange]);
 
-  // Coordenadas SVG e Normalizações
+  // Funcao para gerar curvas suaves Cubic Bezier
+  const getSmoothPath = (pts: { x: number; y: number }[]) => {
+    if (pts.length === 0) return "";
+    if (pts.length === 1) return `M ${pts[0].x} ${pts[0].y}`;
+    let path = `M ${pts[0].x} ${pts[0].y}`;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p0 = pts[i === 0 ? i : i - 1];
+      const p1 = pts[i];
+      const p2 = pts[i + 1];
+      const p3 = pts[i + 2 < pts.length ? i + 2 : i + 1];
+      const cp1x = p1.x + (p2.x - p0.x) / 6;
+      const cp1y = p1.y + (p2.y - p0.y) / 6;
+      const cp2x = p2.x - (p3.x - p1.x) / 6;
+      const cp2y = p2.y - (p3.y - p1.y) / 6;
+      path += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`;
+    }
+    return path;
+  };
+
+  // Coordenadas SVG, Curvas de Bezier e Normalizacoes
   const svgPaths = useMemo(() => {
     const width = 600;
     const height = 250;
@@ -206,45 +226,36 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
     const minCarga = Math.min(...cargas, 10) * 0.9;
     const maxCarga = Math.max(...cargas, 100) * 1.1;
 
-    const getX = (index: number) => padding + (index / (chartData.length - 1)) * chartWidth;
+    const getX = (index: number) => padding + (index / (Math.max(chartData.length - 1, 1))) * chartWidth;
     const getY = (value: number, min: number, max: number) => {
       if (max === min) return chartHeight / 2 + padding;
       return chartHeight + padding - ((value - min) / (max - min)) * chartHeight;
     };
 
-    let pesoPoints = "";
-    let cargaPoints = "";
+    const ptsPeso = chartData.map((pt, i) => ({ x: getX(i), y: getY(pt.peso, minPeso, maxPeso) }));
+    const ptsCarga = chartData.map((pt, i) => ({ x: getX(i), y: getY(pt.volumeCarga, minCarga, maxCarga) }));
 
-    chartData.forEach((pt, i) => {
-      const x = getX(i);
-      const yPeso = getY(pt.peso, minPeso, maxPeso);
-      const yCarga = getY(pt.volumeCarga, minCarga, maxCarga);
-
-      if (i === 0) {
-        pesoPoints = `M ${x} ${yPeso}`;
-        cargaPoints = `M ${x} ${yCarga}`;
-      } else {
-        pesoPoints += ` L ${x} ${yPeso}`;
-        cargaPoints += ` L ${x} ${yCarga}`;
-      }
-    });
+    const pesoPoints = getSmoothPath(ptsPeso);
+    const cargaPoints = getSmoothPath(ptsCarga);
 
     let pesoFillPoints = "";
     let cargaFillPoints = "";
 
-    if (chartData.length > 0) {
-      const x0 = getX(0);
-      const xN = getX(chartData.length - 1);
+    if (ptsPeso.length > 0) {
+      const x0 = ptsPeso[0].x;
+      const xN = ptsPeso[ptsPeso.length - 1].x;
       const baseY = chartHeight + padding;
-
-      const firstY = getY(chartData[0].peso, minPeso, maxPeso);
-      pesoFillPoints = `M ${x0} ${baseY} L ${x0} ${firstY} ${pesoPoints.substring(pesoPoints.indexOf(" L"))} L ${xN} ${baseY} Z`;
-
-      const firstCargaY = getY(chartData[0].volumeCarga, minCarga, maxCarga);
-      cargaFillPoints = `M ${x0} ${baseY} L ${x0} ${firstCargaY} ${cargaPoints.substring(cargaPoints.indexOf(" L"))} L ${xN} ${baseY} Z`;
+      pesoFillPoints = `${pesoPoints} L ${xN} ${baseY} L ${x0} ${baseY} Z`;
     }
 
-    return { pesoPoints, cargaPoints, pesoFillPoints, cargaFillPoints, minPeso, maxPeso, minCarga, maxCarga, getX, getY, chartWidth, chartHeight, padding };
+    if (ptsCarga.length > 0) {
+      const x0 = ptsCarga[0].x;
+      const xN = ptsCarga[ptsCarga.length - 1].x;
+      const baseY = chartHeight + padding;
+      cargaFillPoints = `${cargaPoints} L ${xN} ${baseY} L ${x0} ${baseY} Z`;
+    }
+
+    return { pesoPoints, cargaPoints, pesoFillPoints, cargaFillPoints, minPeso, maxPeso, minCarga, maxCarga, getX, getY, chartWidth, chartHeight, padding, ptsPeso, ptsCarga };
   }, [chartData, user.peso]);
 
   // 2. Processar dados para o Mapa de Calor (últimos 180 dias)
@@ -935,33 +946,66 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
         {/* COLUNA ESQUERDA (Evolução & IA) */}
         <div className="col-lg-7 col-md-12">
           
-          {/* Gráfico SVG de Duplo Eixo */}
-          <div className="glass-card p-4 mb-4">
-            <div className="d-flex justify-content-between align-items-center mb-3">
+          {/* Gráfico SVG de Duplo Eixo (Moderno & Dinâmico) */}
+          <div className="glass-card p-4 mb-4 position-relative overflow-hidden">
+            <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
               <div>
-                <h3 className="ascend-title mb-0" style={{ fontSize: "1.2rem", color: "var(--cream)" }}>
-                  Evolução Temporal
-                </h3>
+                <div className="d-flex align-items-center gap-2">
+                  <h3 className="ascend-title mb-0" style={{ fontSize: "1.25rem", color: "var(--cream)" }}>
+                    Evolução Temporal
+                  </h3>
+                  <span className="badge bg-dark border border-secondary text-warning" style={{ fontSize: "0.68rem" }}>
+                    Spline Bezier
+                  </span>
+                </div>
                 <span className="text-muted small">Evolução do seu Peso Corporal vs. Carga de Musculação</span>
               </div>
-              <div className="d-flex gap-3 text-end" style={{ fontSize: "0.75rem" }}>
-                <div>
-                  <span className="d-inline-block rounded-circle me-1" style={{ width: "8px", height: "8px", background: "var(--gold)" }}></span>
-                  <span className="text-muted">Carga total (kg)</span>
+
+              {/* Filtros Dinâmicos de Período + Legenda */}
+              <div className="d-flex align-items-center gap-3">
+                <div className="btn-group btn-group-sm bg-dark p-1 rounded-pill border border-secondary" role="group">
+                  <button
+                    type="button"
+                    className={`btn btn-xs rounded-pill border-0 ${chartTimeRange === 7 ? "btn-warning text-dark fw-bold" : "text-muted"}`}
+                    onClick={() => setChartTimeRange(7)}
+                  >
+                    7D
+                  </button>
+                  <button
+                    type="button"
+                    className={`btn btn-xs rounded-pill border-0 ${chartTimeRange === 30 ? "btn-warning text-dark fw-bold" : "text-muted"}`}
+                    onClick={() => setChartTimeRange(30)}
+                  >
+                    30D
+                  </button>
+                  <button
+                    type="button"
+                    className={`btn btn-xs rounded-pill border-0 ${chartTimeRange === 90 ? "btn-warning text-dark fw-bold" : "text-muted"}`}
+                    onClick={() => setChartTimeRange(90)}
+                  >
+                    90D
+                  </button>
                 </div>
-                <div>
-                  <span className="d-inline-block rounded-circle me-1" style={{ width: "8px", height: "8px", background: "#4b88be" }}></span>
-                  <span className="text-muted">Peso (kg)</span>
+
+                <div className="d-flex gap-3 text-end" style={{ fontSize: "0.75rem" }}>
+                  <div>
+                    <span className="d-inline-block rounded-circle me-1" style={{ width: "8px", height: "8px", background: "var(--gold)", boxShadow: "0 0 8px var(--gold)" }}></span>
+                    <span className="text-muted">Carga total</span>
+                  </div>
+                  <div>
+                    <span className="d-inline-block rounded-circle me-1" style={{ width: "8px", height: "8px", background: "#4b88be", boxShadow: "0 0 8px #4b88be" }}></span>
+                    <span className="text-muted">Peso</span>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Render do Gráfico SVG */}
-            <div className="position-relative" style={{ height: "250px" }}>
+            {/* Render do Gráfico SVG de Neon */}
+            <div className="position-relative" style={{ height: "260px" }}>
               <svg
                 width="100%"
                 height="100%"
-                viewBox="0 0 600 250"
+                viewBox="0 0 600 260"
                 preserveAspectRatio="none"
                 style={{ overflow: "visible" }}
                 onMouseMove={(e) => {
@@ -970,8 +1014,7 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
                   const ratio = mouseX / rect.width;
                   const targetX = ratio * 600;
 
-                  // Achar ponto mais próximo em chartData
-                  const stepWidth = (600 - svgPaths.padding * 2) / (chartData.length - 1);
+                  const stepWidth = (600 - svgPaths.padding * 2) / Math.max(chartData.length - 1, 1);
                   let idx = Math.round((targetX - svgPaths.padding) / stepWidth);
                   idx = Math.max(0, Math.min(chartData.length - 1, idx));
 
@@ -991,30 +1034,47 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
                 }}
                 onMouseLeave={() => setHoveredPoint(null)}
               >
-                {/* Definições de Gradientes */}
+                {/* Definições de Gradientes e Filtros Neon */}
                 <defs>
                   <linearGradient id="gradientPeso" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#4b88be" stopOpacity="0.25" />
+                    <stop offset="0%" stopColor="#4b88be" stopOpacity="0.35" />
                     <stop offset="100%" stopColor="#4b88be" stopOpacity="0.0" />
                   </linearGradient>
                   <linearGradient id="gradientCarga" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="var(--gold)" stopOpacity="0.25" />
+                    <stop offset="0%" stopColor="var(--gold)" stopOpacity="0.35" />
                     <stop offset="100%" stopColor="var(--gold)" stopOpacity="0.0" />
                   </linearGradient>
+                  <filter id="glowCarga" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="3" result="blur" />
+                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                  </filter>
+                  <filter id="glowPeso" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="3" result="blur" />
+                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                  </filter>
                 </defs>
 
-                {/* Grade de fundo horizontal */}
-                <line x1={svgPaths.padding} y1={svgPaths.padding} x2={600 - svgPaths.padding} y2={svgPaths.padding} stroke="rgba(255,255,255,0.04)" strokeDasharray="3,3" />
-                <line x1={svgPaths.padding} y1={svgPaths.padding + svgPaths.chartHeight / 2} x2={600 - svgPaths.padding} y2={svgPaths.padding + svgPaths.chartHeight / 2} stroke="rgba(255,255,255,0.04)" strokeDasharray="3,3" />
-                <line x1={svgPaths.padding} y1={svgPaths.padding + svgPaths.chartHeight} x2={600 - svgPaths.padding} y2={svgPaths.padding + svgPaths.chartHeight} stroke="rgba(255,255,255,0.04)" strokeDasharray="3,3" />
+                {/* Grade de fundo horizontal estilizada */}
+                <line x1={svgPaths.padding} y1={svgPaths.padding} x2={600 - svgPaths.padding} y2={svgPaths.padding} stroke="rgba(255,255,255,0.05)" strokeDasharray="4,4" />
+                <line x1={svgPaths.padding} y1={svgPaths.padding + svgPaths.chartHeight / 2} x2={600 - svgPaths.padding} y2={svgPaths.padding + svgPaths.chartHeight / 2} stroke="rgba(255,255,255,0.05)" strokeDasharray="4,4" />
+                <line x1={svgPaths.padding} y1={svgPaths.padding + svgPaths.chartHeight} x2={600 - svgPaths.padding} y2={svgPaths.padding + svgPaths.chartHeight} stroke="rgba(255,255,255,0.05)" strokeDasharray="4,4" />
 
-                {/* Áreas com Gradiente */}
+                {/* Áreas com Gradiente Suave */}
                 {svgPaths.pesoFillPoints && <path d={svgPaths.pesoFillPoints} fill="url(#gradientPeso)" />}
                 {svgPaths.cargaFillPoints && <path d={svgPaths.cargaFillPoints} fill="url(#gradientCarga)" />}
 
-                {/* Linhas Principais */}
-                {svgPaths.pesoPoints && <path d={svgPaths.pesoPoints} fill="none" stroke="#4b88be" strokeWidth="2.5" />}
-                {svgPaths.cargaPoints && <path d={svgPaths.cargaPoints} fill="none" stroke="var(--gold)" strokeWidth="2.5" />}
+                {/* Linhas Suaves Bezier Neon */}
+                {svgPaths.pesoPoints && (
+                  <path d={svgPaths.pesoPoints} fill="none" stroke="#4b88be" strokeWidth="3" filter="url(#glowPeso)" />
+                )}
+                {svgPaths.cargaPoints && (
+                  <path d={svgPaths.cargaPoints} fill="none" stroke="var(--gold)" strokeWidth="3" filter="url(#glowCarga)" />
+                )}
+
+                {/* Pontos Discretos na Linha */}
+                {svgPaths.ptsCarga?.map((p, i) => (
+                  <circle key={`c-${i}`} cx={p.x} cy={p.y} r="3" fill="var(--gold)" opacity="0.7" />
+                ))}
 
                 {/* Linha vertical e pontos em foco (Hover) */}
                 {hoveredPoint && (
@@ -1024,40 +1084,43 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
                       y1={svgPaths.padding}
                       x2={hoveredPoint.x}
                       y2={svgPaths.padding + svgPaths.chartHeight}
-                      stroke="rgba(255,255,255,0.15)"
+                      stroke="rgba(212, 175, 55, 0.4)"
                       strokeDasharray="4,4"
                     />
-                    <circle cx={hoveredPoint.x} cy={hoveredPoint.yPeso} r="6" fill="#4b88be" stroke="#fff" strokeWidth="1.5" />
-                    <circle cx={hoveredPoint.x} cy={hoveredPoint.yCarga} r="6" fill="var(--gold)" stroke="#fff" strokeWidth="1.5" />
+                    <circle cx={hoveredPoint.x} cy={hoveredPoint.yPeso} r="7" fill="#4b88be" stroke="#fff" strokeWidth="2" />
+                    <circle cx={hoveredPoint.x} cy={hoveredPoint.yCarga} r="7" fill="var(--gold)" stroke="#fff" strokeWidth="2" />
                   </>
                 )}
               </svg>
 
-              {/* Tooltip flutuante dinâmico */}
+              {/* Tooltip flutuante dinâmico Glassmorphism */}
               {hoveredPoint && (
                 <div
-                  className="position-absolute p-2.5 rounded shadow text-white border"
+                  className="position-absolute p-3 rounded-4 shadow text-white border"
                   style={{
-                    left: `${(hoveredPoint.x / 600) * 100}%`,
-                    top: "10%",
+                    left: `${Math.min(Math.max((hoveredPoint.x / 600) * 100, 15), 85)}%`,
+                    top: "5%",
                     transform: "translateX(-50%)",
-                    background: "rgba(10, 18, 12, 0.9)",
-                    borderColor: "rgba(212, 175, 55, 0.3)",
-                    fontSize: "0.75rem",
+                    background: "rgba(10, 18, 12, 0.92)",
+                    backdropFilter: "blur(12px)",
+                    borderColor: "rgba(212, 175, 55, 0.35)",
+                    boxShadow: "0 8px 30px rgba(0,0,0,0.6)",
+                    fontSize: "0.78rem",
                     zIndex: 10,
                     pointerEvents: "none",
-                    minWidth: "125px",
+                    minWidth: "140px",
                   }}
                 >
-                  <strong className="d-block text-warning text-center border-bottom border-secondary pb-1 mb-1">
-                    {hoveredPoint.label}
-                  </strong>
-                  <div className="d-flex justify-content-between gap-3">
-                    <span className="text-muted">Peso:</span>
-                    <span className="fw-bold">{hoveredPoint.peso} kg</span>
+                  <div className="d-flex justify-content-between align-items-center border-bottom border-secondary pb-1 mb-2">
+                    <span className="text-warning fw-bold">{hoveredPoint.label}</span>
+                    <span className="badge bg-dark text-muted" style={{ fontSize: "0.65rem" }}>{chartTimeRange}D</span>
+                  </div>
+                  <div className="d-flex justify-content-between gap-3 mb-1">
+                    <span className="text-muted">Peso Corporal:</span>
+                    <span className="fw-bold text-info">{hoveredPoint.peso} kg</span>
                   </div>
                   <div className="d-flex justify-content-between gap-3">
-                    <span className="text-muted">Volume:</span>
+                    <span className="text-muted">Volume Carga:</span>
                     <span className="fw-bold text-warning">{hoveredPoint.volumeCarga} kg</span>
                   </div>
                 </div>

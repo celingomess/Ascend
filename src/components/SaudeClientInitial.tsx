@@ -1632,37 +1632,7 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
                 </div>
               )}
 
-              {/* Atalhos Rápidos com Tipografia Limpa sem Emojis/Icones */}
-              <div className="d-flex gap-1.5 overflow-auto pb-2 mb-3" style={{ scrollbarWidth: "none" }}>
-                <button
-                  type="button"
-                  className="btn btn-xs btn-ascend-outline text-nowrap rounded-pill px-3"
-                  onClick={() => { setCaloriesInput("250"); setProteinInput("18"); setCarbsInput("2"); setFatInput("20"); }}
-                >
-                  3 Ovos Mexidos (250 kcal)
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-xs btn-ascend-outline text-nowrap rounded-pill px-3"
-                  onClick={() => { setCaloriesInput("330"); setProteinInput("62"); setCarbsInput("0"); setFatInput("7"); }}
-                >
-                  Peito de Frango 200g (330 kcal)
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-xs btn-ascend-outline text-nowrap rounded-pill px-3"
-                  onClick={() => { setCaloriesInput("280"); setProteinInput("8"); setCarbsInput("50"); setFatInput("4"); }}
-                >
-                  Arroz com Feijão (280 kcal)
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-xs btn-ascend-outline text-nowrap rounded-pill px-3"
-                  onClick={() => { setCaloriesInput("120"); setProteinInput("24"); setCarbsInput("3"); setFatInput("1"); }}
-                >
-                  Whey Protein (120 kcal)
-                </button>
-              </div>
+
 
               {/* Form de Lançamento Manual Limpo */}
               <form onSubmit={handleQuickAdd}>

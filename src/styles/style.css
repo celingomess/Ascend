@@ -1505,3 +1505,14 @@ html body label {
     background-color: rgba(226, 201, 133, 0.15) !important;
     color: var(--gold-soft) !important;
 }
+
+
+/* Fix Chrome input autofill light background */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px #0b140e inset !important;
+    -webkit-text-fill-color: #f5eddd !important;
+    transition: background-color 5000s ease-in-out 0s;
+}

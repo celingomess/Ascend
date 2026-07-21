@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
 import prisma from "@/lib/prisma";
-import Sidebar from "@/components/Sidebar";
-import MobileBottomNav from "@/components/MobileBottomNav";
+import AppShell from "@/components/AppShell";
 import { LevelUpProvider } from "@/components/LevelUpContext";
-import AiCopilotDrawer from "@/components/AiCopilotDrawer";
 
 // Importar estilos globais e Bootstrap local
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -87,14 +85,7 @@ export default async function RootLayout({
       </head>
       <body>
         <LevelUpProvider>
-          <div className="ascend-app-shell">
-            <Sidebar user={userData} />
-
-            <main className="ascend-app-main">{children}</main>
-
-            <MobileBottomNav />
-            <AiCopilotDrawer />
-          </div>
+          <AppShell user={userData}>{children}</AppShell>
         </LevelUpProvider>
 
         {/* Bootstrap Bundle JS */}

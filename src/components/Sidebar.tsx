@@ -7,6 +7,7 @@ import {
   Home,
   Compass,
   HeartPulse,
+  Clock,
   Award,
   Gem,
   TrendingUp,
@@ -33,6 +34,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ user }) => {
   const menuItems = [
     { name: "Início", path: "/dashboard", icon: () => <Home size={20} /> },
     { name: "Jornadas", path: "/metas", icon: () => <Compass size={20} /> },
+    { name: "Foco", path: "/foco", icon: () => <Clock size={20} /> },
     { name: "Saúde", path: "/saude", icon: () => <HeartPulse size={20} /> },
     { name: "Finanças", path: "/financas", icon: () => <span className="bi bi-bank" style={{ fontSize: "1.2rem", color: "inherit" }} /> },
     { name: "Legado", path: "/conquistas", icon: () => <Award size={20} /> },

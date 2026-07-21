@@ -1,0 +1,85 @@
+/* ===================================
+   ASCEND OS - FOCO & DEEP WORK STYLES
+   =================================== */
+
+.foco-hero-card {
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.08) 0%, rgba(10, 18, 12, 0.95) 100%) !important;
+  border: 1px solid rgba(212, 175, 55, 0.25) !important;
+  backdrop-filter: blur(16px);
+  border-radius: 24px !important;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+.foco-ring-svg {
+  transform: rotate(-90deg);
+  overflow: visible;
+}
+
+.foco-ring-bg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.05);
+  stroke-width: 10;
+}
+
+.foco-ring-active {
+  fill: none;
+  stroke: var(--gold, #d4af37);
+  stroke-width: 10;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1s linear, stroke 0.4s ease;
+  filter: drop-shadow(0 0 12px rgba(212, 175, 55, 0.4));
+}
+
+.foco-timer-time {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-weight: 700;
+  font-size: 3.5rem;
+  letter-spacing: 2px;
+  color: var(--cream, #f4e8c1);
+  text-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
+}
+
+.foco-phase-pill {
+  background: rgba(212, 175, 55, 0.12);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  color: var(--gold-soft, #e2c985);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 6px 16px;
+  border-radius: 99px;
+}
+
+.btn-foco-gold {
+  background: linear-gradient(135deg, #b89742 0%, #d8bd73 100%);
+  color: #07110c;
+  font-weight: 800;
+  border: none;
+  border-radius: 99px;
+  padding: 12px 32px;
+  box-shadow: 0 4px 20px rgba(212, 175, 55, 0.3);
+  transition: all 0.25s ease;
+}
+
+.btn-foco-gold:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(212, 175, 55, 0.5);
+  color: #07110c;
+}
+
+.foco-combo-badge {
+  background: rgba(231, 111, 81, 0.15);
+  border: 1px solid rgba(231, 111, 81, 0.4);
+  color: #e76f51;
+  font-weight: 700;
+  font-size: 0.75rem;
+  padding: 4px 12px;
+  border-radius: 99px;
+  animation: pulseFire 2s infinite ease-in-out;
+}
+
+@keyframes pulseFire {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}

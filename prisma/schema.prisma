@@ -259,3 +259,18 @@ model HealthAiReports {
 
   @@map("health_ai_reports")
 }
+
+model focus_sessions {
+  id               Int      @id @default(autoincrement())
+  user_id          Int
+  duracao_minutos  Int
+  categoria        String   @db.VarChar(50)
+  titulo_tarefa    String?  @db.VarChar(200)
+  goal_id          Int?
+  xp_ganho         Int
+  status           String   @default("CONCLUIDA") @db.VarChar(20)
+  criado_em        DateTime @default(now()) @db.DateTime(0)
+
+  @@index([user_id], map: "user_id")
+}
+

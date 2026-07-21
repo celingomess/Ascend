@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Compass, HeartPulse, User } from "lucide-react";
+import { Home, Compass, Clock, HeartPulse, User } from "lucide-react";
 
 export const MobileBottomNav: React.FC = () => {
   const pathname = usePathname();
@@ -11,8 +11,8 @@ export const MobileBottomNav: React.FC = () => {
   const navItems = [
     { name: "Início", path: "/dashboard", icon: () => <Home size={20} /> },
     { name: "Jornadas", path: "/metas", icon: () => <Compass size={20} /> },
+    { name: "Foco", path: "/foco", icon: () => <Clock size={20} /> },
     { name: "Saúde", path: "/saude", icon: () => <HeartPulse size={20} /> },
-    { name: "Finanças", path: "/financas", icon: () => <span className="bi bi-bank" style={{ fontSize: "1.2rem" }} /> },
     { name: "Perfil", path: "/perfil", icon: () => <User size={20} /> },
   ];
 

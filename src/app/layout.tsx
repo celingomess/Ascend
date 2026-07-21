@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import Sidebar from "@/components/Sidebar";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import { LevelUpProvider } from "@/components/LevelUpContext";
+import AiCopilotDrawer from "@/components/AiCopilotDrawer";
 
 // Importar estilos globais
 import "../styles/style.css";
@@ -100,6 +101,7 @@ export default async function RootLayout({
             <main className="ascend-app-main">{children}</main>
 
             <MobileBottomNav />
+            <AiCopilotDrawer />
           </div>
         </LevelUpProvider>
 

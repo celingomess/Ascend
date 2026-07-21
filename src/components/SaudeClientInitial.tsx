@@ -145,6 +145,85 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
     }
   };
 
+    // Estados da Calculadora Cientifica de TDEE e Deficit Calorico (Mifflin-St Jeor)
+  const [isCalculadoraOpen, setIsCalculadoraOpen] = useState(false);
+  const [calcSexo, setCalcSexo] = useState<"M" | "F">("M");
+  const [calcIdade, setCalcIdade] = useState<number>(25);
+  const [calcPeso, setCalcPeso] = useState<number>(user.peso || 80);
+  const [calcAltura, setCalcAltura] = useState<number>(175);
+  const [calcFatorAtividade, setCalcFatorAtividade] = useState<number>(1.375);
+  const [calcGastoTreino, setCalcGastoTreino] = useState<number>(250);
+  const [calcObjetivo, setCalcObjetivo] = useState<number>(-0.20);
+
+  // Calculo Dinamico da Taxa Metabolica Basal (TMB)
+  const calcTMB = useMemo(() => {
+    if (calcSexo === "M") {
+      return Math.round(10 * calcPeso + 6.25 * calcAltura - 5 * calcIdade + 5);
+    } else {
+      return Math.round(10 * calcPeso + 6.25 * calcAltura - 5 * calcIdade - 161);
+    }
+  }, [calcSexo, calcPeso, calcAltura, calcIdade]);
+
+  // Gasto Energetico Total Diario (TDEE)
+  const calcTDEE = useMemo(() => {
+    return Math.round(calcTMB * calcFatorAtividade + (calcGastoTreino || 0));
+  }, [calcTMB, calcFatorAtividade, calcGastoTreino]);
+
+  // Meta Recomendada em Calorias
+  const calcMetaCalorias = useMemo(() => {
+    return Math.round(calcTDEE * (1 + calcObjetivo));
+  }, [calcTDEE, calcObjetivo]);
+
+  // Deficit ou Superavit em Kcal/dia
+  const calcDeficitDiario = useMemo(() => {
+    return calcMetaCalorias - calcTDEE;
+  }, [calcMetaCalorias, calcTDEE]);
+
+  // Perda Estimada em Gordura por Semana (1kg gordura = 7700 kcal)
+  const calcPerdaSemanalKg = useMemo(() => {
+    const deficitSemanal = Math.abs(calcDeficitDiario * 7);
+    return (deficitSemanal / 7700).toFixed(2);
+  }, [calcDeficitDiario]);
+
+  // Distribuição Recomendada de Macronutrientes (Prot 2.0g/kg, Gord 0.8g/kg, Carb restante)
+  const calcMacros = useMemo(() => {
+    const protG = Math.round(calcPeso * 2.0);
+    const gordG = Math.round(calcPeso * 0.8);
+    const kcalProtGord = protG * 4 + gordG * 9;
+    const carbG = Math.max(0, Math.round((calcMetaCalorias - kcalProtGord) / 4));
+    return { protG, gordG, carbG };
+  }, [calcPeso, calcMetaCalorias]);
+
+  // Aplicar Meta Calculada no Ascend OS
+  const handleApplyCalculatedMeta = async () => {
+    try {
+      const formData = new FormData();
+      formData.append("calorias_meta", calcMetaCalorias.toString());
+
+      const res = await fetch("/saude/meta/atualizar", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        setNutrition((prev) => ({
+          ...prev,
+          calorias_meta: calcMetaCalorias,
+        }));
+        setIsCalculadoraOpen(false);
+        if (typeof window !== "undefined" && (window as any).AscendSFX) {
+          (window as any).AscendSFX.playSuccess();
+        }
+        alert(`Meta de ${calcMetaCalorias} kcal/dia aplicada com sucesso no Ascend OS!`);
+      } else {
+        alert("Erro ao aplicar meta: " + data.message);
+      }
+    } catch (err: any) {
+      alert("Erro ao conectar: " + err.message);
+    }
+  };
+
   const [chartTimeRange, setChartTimeRange] = useState<7 | 30 | 90>(30);
   const [hoveredPoint, setHoveredPoint] = useState<{
     x: number;
@@ -1312,13 +1391,22 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
                 </h3>
                 <span className="text-muted small">Balanço de Nutrientes & Calorias</span>
               </div>
-              <button
-                type="button"
-                className="btn btn-xs btn-ascend-outline px-3"
-                onClick={() => setIsConfigMetaOpen(true)}
-              >
-                Configurar Meta
-              </button>
+              <div className="d-flex gap-2">
+                <button
+                  type="button"
+                  className="btn btn-xs btn-ascend px-3 fw-bold"
+                  onClick={() => setIsCalculadoraOpen(true)}
+                >
+                  Calculadora de Déficit
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-xs btn-ascend-outline px-3"
+                  onClick={() => setIsConfigMetaOpen(true)}
+                >
+                  Configurar Meta
+                </button>
+              </div>
             </div>
 
             {/* Concentric Activity Rings & Exibição de Calorias */}
@@ -1973,6 +2061,201 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Calculadora de Deficit Calorico & TDEE */}
+      {isCalculadoraOpen && (
+        <div className="modal fade show" style={{ display: "block", backgroundColor: "rgba(0,0,0,0.7)" }} tabIndex={-1} aria-hidden="true">
+          <div className="modal-dialog modal-dialog-centered modal-lg">
+            <div
+              className="modal-content"
+              style={{ background: "#09120c", border: "1px solid rgba(212, 175, 55, 0.3)", borderRadius: "24px", boxShadow: "0 20px 60px rgba(0,0,0,0.8)" }}
+            >
+              <div className="modal-header border-bottom border-secondary px-4 pt-4">
+                <div>
+                  <h4 className="modal-title text-white fw-bold mb-0">Calculadora Científica de Déficit Calórico & TDEE</h4>
+                  <span className="text-muted small">Cálculo de Metabolismo Basal (Mifflin-St Jeor) e Gasto Energético Total</span>
+                </div>
+                <button
+                  type="button"
+                  className="btn-close btn-close-white"
+                  onClick={() => setIsCalculadoraOpen(false)}
+                  aria-label="Close"
+                ></button>
+              </div>
+
+              <div className="modal-body px-4 py-3">
+                <div className="row g-4">
+                  {/* Coluna Esquerda: Parâmetros Fisiológicos e Atividade */}
+                  <div className="col-md-6 border-end border-secondary pe-md-4">
+                    <h6 className="text-warning fw-bold mb-3 border-bottom border-secondary pb-1">1. Parâmetros Fisiológicos</h6>
+                    
+                    {/* Sexo */}
+                    <div className="mb-3">
+                      <label className="form-label text-muted small fw-bold mb-1">Sexo Biológico</label>
+                      <div className="d-flex gap-3">
+                        <button
+                          type="button"
+                          className={`btn btn-sm flex-fill ${calcSexo === "M" ? "btn-warning text-dark fw-bold" : "btn-outline-secondary text-white"}`}
+                          onClick={() => setCalcSexo("M")}
+                        >
+                          Masculino
+                        </button>
+                        <button
+                          type="button"
+                          className={`btn btn-sm flex-fill ${calcSexo === "F" ? "btn-warning text-dark fw-bold" : "btn-outline-secondary text-white"}`}
+                          onClick={() => setCalcSexo("F")}
+                        >
+                          Feminino
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Idade, Peso, Altura */}
+                    <div className="row g-2 mb-3">
+                      <div className="col-4">
+                        <label className="form-label text-muted small fw-bold mb-1">Idade (anos)</label>
+                        <input
+                          type="number"
+                          className="form-control bg-dark text-white border-secondary text-center form-control-sm"
+                          value={calcIdade}
+                          onChange={(e) => setCalcIdade(parseInt(e.target.value) || 25)}
+                        />
+                      </div>
+                      <div className="col-4">
+                        <label className="form-label text-muted small fw-bold mb-1">Peso (kg)</label>
+                        <input
+                          type="number"
+                          step="0.1"
+                          className="form-control bg-dark text-white border-secondary text-center form-control-sm"
+                          value={calcPeso}
+                          onChange={(e) => setCalcPeso(parseFloat(e.target.value) || 80)}
+                        />
+                      </div>
+                      <div className="col-4">
+                        <label className="form-label text-muted small fw-bold mb-1">Altura (cm)</label>
+                        <input
+                          type="number"
+                          className="form-control bg-dark text-white border-secondary text-center form-control-sm"
+                          value={calcAltura}
+                          onChange={(e) => setCalcAltura(parseInt(e.target.value) || 175)}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Nivel de Atividade (NEAT) */}
+                    <div className="mb-3">
+                      <label className="form-label text-muted small fw-bold mb-1">Nível de Atividade Diária (NEAT)</label>
+                      <select
+                        className="form-select bg-dark text-white border-secondary form-select-sm"
+                        value={calcFatorAtividade}
+                        onChange={(e) => setCalcFatorAtividade(parseFloat(e.target.value))}
+                      >
+                        <option value={1.2}>Sedentário (Trabalho sentado, sem exercício)</option>
+                        <option value={1.375}>Levemente Ativo (Exercício leve 1-3 dias/sem)</option>
+                        <option value={1.55}>Moderadamente Ativo (Exercício moderado 3-5 dias/sem)</option>
+                        <option value={1.725}>Altamente Ativo (Treino pesado 6-7 dias/sem)</option>
+                        <option value={1.9}>Extremamente Ativo (Trabalho braçal + treino 2x/dia)</option>
+                      </select>
+                    </div>
+
+                    {/* Gasto com Treinos Adicionais */}
+                    <div className="mb-3">
+                      <label className="form-label text-muted small fw-bold mb-1">Gasto de Treinos Adicionais (Kcal/dia)</label>
+                      <input
+                        type="number"
+                        className="form-control bg-dark text-white border-secondary form-control-sm"
+                        value={calcGastoTreino}
+                        onChange={(e) => setCalcGastoTreino(parseInt(e.target.value) || 0)}
+                        placeholder="Ex: 300 kcal (Musculação + Corrida)"
+                      />
+                    </div>
+
+                    {/* Estratégia de Objetivo */}
+                    <div className="mb-3">
+                      <label className="form-label text-muted small fw-bold mb-1">Estratégia Nutricional</label>
+                      <select
+                        className="form-select bg-dark text-white border-secondary form-select-sm"
+                        value={calcObjetivo}
+                        onChange={(e) => setCalcObjetivo(parseFloat(e.target.value))}
+                      >
+                        <option value={-0.25}>Déficit Agressivo (-25%) — Perda Rápida (~0.8 kg/sem)</option>
+                        <option value={-0.20}>Déficit Moderado (-20%) — Emagrecimento Saudável (~0.5 kg/sem)</option>
+                        <option value={-0.10}>Déficit Leve (-10%) — Preservação Máxima de Massa</option>
+                        <option value={0.0}>Manutenção (0%) — Recomposição Corporal</option>
+                        <option value={0.10}>Superávit Moderado (+10%) — Bulking Limpo</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Coluna Direita: Resultados Calculados em Tempo Real */}
+                  <div className="col-md-6 ps-md-4 d-flex flex-column justify-content-between">
+                    <div>
+                      <h6 className="text-warning fw-bold mb-3 border-bottom border-secondary pb-1">2. Balanço Energético Projetado</h6>
+
+                      {/* Quadro de Métricas */}
+                      <div className="p-3 mb-3 rounded-3 bg-dark border border-secondary">
+                        <div className="d-flex justify-content-between align-items-center mb-2">
+                          <span className="text-muted small">Taxa Metabólica Basal (TMB):</span>
+                          <strong className="text-info">{calcTMB} kcal/dia</strong>
+                        </div>
+                        <div className="d-flex justify-content-between align-items-center mb-2">
+                          <span className="text-muted small">Gasto Total Diário (TDEE):</span>
+                          <strong className="text-warning">{calcTDEE} kcal/dia</strong>
+                        </div>
+                        <div className="d-flex justify-content-between align-items-center mb-2 border-top border-secondary pt-2">
+                          <span className="text-white fw-bold">Meta Diária Sugerida:</span>
+                          <strong className="text-success fs-5">{calcMetaCalorias} kcal</strong>
+                        </div>
+                        <div className="d-flex justify-content-between align-items-center">
+                          <span className="text-muted small">Déficit Diário Projetado:</span>
+                          <strong className={calcDeficitDiario < 0 ? "text-danger" : "text-success"}>
+                            {calcDeficitDiario} kcal/dia (~{calcPerdaSemanalKg} kg gordura/sem)
+                          </strong>
+                        </div>
+                      </div>
+
+                      {/* Distribuição de Macronutrientes Sugerida */}
+                      <h6 className="text-warning fw-bold mb-2 style={{ fontSize: '0.85rem' }}">Distribuição de Macronutrientes Recomendada:</h6>
+                      <div className="row g-2 mb-3 text-center">
+                        <div className="col-4">
+                          <div className="p-2 rounded bg-dark border border-secondary">
+                            <span className="d-block text-muted small" style={{ fontSize: "0.7rem" }}>PROTEÍNAS</span>
+                            <strong className="text-info">{calcMacros.protG}g</strong>
+                            <span className="d-block text-muted" style={{ fontSize: "0.65rem" }}>2.0g / kg</span>
+                          </div>
+                        </div>
+                        <div className="col-4">
+                          <div className="p-2 rounded bg-dark border border-secondary">
+                            <span className="d-block text-muted small" style={{ fontSize: "0.7rem" }}>CARBOIDRATOS</span>
+                            <strong className="text-warning">{calcMacros.carbG}g</strong>
+                            <span className="d-block text-muted" style={{ fontSize: "0.65rem" }}>Energia</span>
+                          </div>
+                        </div>
+                        <div className="col-4">
+                          <div className="p-2 rounded bg-dark border border-secondary">
+                            <span className="d-block text-muted small" style={{ fontSize: "0.7rem" }}>GORDURAS</span>
+                            <strong className="text-danger">{calcMacros.gordG}g</strong>
+                            <span className="d-block text-muted" style={{ fontSize: "0.65rem" }}>0.8g / kg</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Botão de Aplicação Direta */}
+                    <button
+                      type="button"
+                      className="btn btn-ascend w-100 py-2.5 fw-bold"
+                      onClick={handleApplyCalculatedMeta}
+                    >
+                      Aplicar esta Meta no Ascend OS
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

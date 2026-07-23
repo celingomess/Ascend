@@ -73,6 +73,49 @@ export const AiCopilotDrawer: React.FC = () => {
     }
   };
 
+  // Renderizador de Formatação Markdown para o Chat
+  const renderFormattedText = (text: string) => {
+    if (!text) return null;
+    const lines = text.split("\n");
+
+    return lines.map((line, lineIdx) => {
+      const parts = line.split(/(\*\*.*?\*\*|`.*?`)/g);
+
+      const formattedLine = parts.map((part, partIdx) => {
+        if (part.startsWith("**") && part.endsWith("**")) {
+          return (
+            <strong key={partIdx} className="gold-text fw-bold">
+              {part.slice(2, -2)}
+            </strong>
+          );
+        }
+        if (part.startsWith("`") && part.endsWith("`")) {
+          return (
+            <code key={partIdx} className="bg-dark text-warning px-1.5 py-0.5 rounded small" style={{ fontSize: "0.8rem" }}>
+              {part.slice(1, -1)}
+            </code>
+          );
+        }
+        return part;
+      });
+
+      if (line.startsWith("- ") || line.startsWith("* ")) {
+        return (
+          <div key={lineIdx} className="d-flex align-items-start gap-2 my-1 ps-1">
+            <span className="gold-text fw-bold">•</span>
+            <div>{formattedLine.map((p, i) => (typeof p === "string" ? p.replace(/^[\-\*]\s*/, "") : p))}</div>
+          </div>
+        );
+      }
+
+      return (
+        <div key={lineIdx} className={lineIdx > 0 ? "mt-1.5" : ""}>
+          {formattedLine}
+        </div>
+      );
+    });
+  };
+
   return (
     <>
       {/* Botão Flutuante FAB */}
@@ -130,37 +173,42 @@ export const AiCopilotDrawer: React.FC = () => {
                   key={idx}
                   className={msg.sender === "user" ? "copilot-msg-user" : "copilot-msg-ai"}
                 >
-                  <div style={{ whiteSpace: "pre-wrap" }}>{msg.text}</div>
+                  {msg.actionExecuted && (
+                    <div className="copilot-msg-action-badge mb-1">
+                      ⚡ Mutaçao Executada ({msg.actionExecuted})
+                    </div>
+                  )}
+                  {renderFormattedText(msg.text)}
                 </div>
               ))}
               {loading && (
                 <div className="copilot-msg-ai text-muted small d-flex align-items-center gap-2">
                   <span className="spinner-border spinner-border-sm gold-text" />
-                  Processando comandos e mutações...
+                  Processando comandos com IA...
                 </div>
               )}
               <div ref={messagesEndRef} />
             </div>
 
             {/* Sugestões Rápidas */}
-            <div className="px-3 py-2 border-top border-secondary d-flex gap-2 overflow-auto" style={{ background: "rgba(0,0,0,0.2)" }}>
+            <div className="px-3 py-2 border-top border-secondary d-flex gap-2 overflow-auto" style={{ background: "rgba(0,0,0,0.25)" }}>
               <button
                 type="button"
-                className="copilot-chip border-0"
+                className="copilot-chip"
                 onClick={() => handleSend("Adicionar despesa de R$ 45 em Alimentação com almoço")}
               >
                 <Zap size={12} className="me-1 gold-text" /> +R$ 45 Almoço
               </button>
               <button
                 type="button"
-                className="copilot-chip border-0"
+                className="copilot-chip"
                 onClick={() => handleSend("Registrar 2 ovos mexidos com 250 kcal no diário de saúde")}
               >
                 🥗 +Refeição 250kcal
               </button>
               <button
                 type="button"
-                className="copilot-chip border-0"
+                className="copilot-chip"
                 onClick={() => handleSend("Crie uma nova jornada para Aprender TypeScript na categoria Estudos")}
               >
                 🚀 Nova Jornada

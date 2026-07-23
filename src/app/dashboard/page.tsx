@@ -13,6 +13,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 
+import ProactiveCopilotCard from "@/components/ProactiveCopilotCard";
+
 import "@/styles/dashboard.css";
 
 export const revalidate = 0; // Evitar cache em desenvolvimento e produção para reatividade do banco de dados
@@ -169,6 +171,9 @@ export default async function DashboardPage() {
 
   return (
     <div className="container-fluid py-4">
+      {/* Copilot Proativo Card */}
+      <ProactiveCopilotCard />
+
       {/* Welcome Hero Card */}
       <section className="dashboard-command-hero mb-5 fade-in-up">
         <div className="dashboard-command-inner">

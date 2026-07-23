@@ -6,6 +6,8 @@ import confetti from "canvas-confetti";
 import { useLevelUp } from "./LevelUpContext";
 import Chart from "chart.js/auto";
 import { parseExpressMealAction, parseExpressWorkoutAction, generateHealthReportAction } from "@/app/saude/actions";
+import { parseMealImageAction } from "@/app/saude/visionActions";
+import { compressImage } from "@/lib/imageCompressor";
 
 import "@/styles/health.css";
 
@@ -653,6 +655,52 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
   const [workoutTextInput, setWorkoutTextInput] = useState("");
   const [isWorkoutLoading, setIsWorkoutLoading] = useState(false);
   const [workoutError, setWorkoutError] = useState<string | null>(null);
+
+  // Estados para Análise Visual de Prato por Foto (Vision AI)
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [isVisionLoading, setIsVisionLoading] = useState(false);
+  const [visionError, setVisionError] = useState<string | null>(null);
+
+  const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setVisionError(null);
+    try {
+      // Compressão no cliente via Canvas HTML5 (< 300ms)
+      const compressedBlob = await compressImage(file, 1024, 1024, 0.8);
+      const compressedFile = new File([compressedBlob], file.name || "prato.jpg", {
+        type: "image/jpeg",
+      });
+
+      setPhotoPreview(URL.createObjectURL(compressedBlob));
+
+      // Disparar análise visual automaticamente
+      setIsVisionLoading(true);
+      const formData = new FormData();
+      formData.append("image", compressedFile);
+
+      const res = await parseMealImageAction(formData);
+      if (res.success) {
+        setCaloriesInput(res.caloriesKcal.toString());
+        setProteinInput(res.proteinsGrams.toString());
+        setCarbsInput(res.carbsGrams.toString());
+        setFatInput(res.fatsGrams.toString());
+        if (res.dishName && !expressInput) {
+          setExpressInput(res.dishName);
+        }
+        if (typeof window !== "undefined" && (window as any).AscendSFX) {
+          (window as any).AscendSFX.playClick();
+        }
+      } else {
+        setVisionError(res.message || "Não foi possível analisar a foto.");
+      }
+    } catch (err: any) {
+      setVisionError("Erro ao processar foto: " + err.message);
+    } finally {
+      setIsVisionLoading(false);
+    }
+  };
 
   // Parser inteligente de linhas de treino
   const parseExerciseLine = (line: string) => {
@@ -1660,8 +1708,51 @@ export const SaudeClientInitial: React.FC<SaudeClientInitialProps> = ({
             {/* Seção de Registro sem Icones */}
             <div className="pt-3 border-top border-secondary">
               <span className="d-block text-muted small fw-bold mb-2" style={{ fontSize: "0.7rem", letterSpacing: "1px" }}>
-                ANÁLISE DE REFEIÇÃO COM IA
+                ANÁLISE DE REFEIÇÃO COM IA (TEXTO OU FOTO)
               </span>
+
+              {/* Botão de Upload de Foto com Câmera / Arquivo */}
+              <div className="d-flex align-items-center gap-2 mb-3 flex-wrap">
+                <label className="btn btn-outline-warning btn-sm fw-bold mb-0 d-inline-flex align-items-center gap-2" style={{ cursor: "pointer", fontSize: "0.8rem" }}>
+                  <span>📸 Analisar Foto do Prato (Visão IA)</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="d-none"
+                    onChange={handlePhotoSelect}
+                    disabled={isVisionLoading}
+                  />
+                </label>
+                {isVisionLoading && (
+                  <span className="text-warning small animate-pulse" style={{ fontSize: "0.78rem" }}>
+                    Analisando alimentos e macronutrientes da imagem...
+                  </span>
+                )}
+              </div>
+
+              {photoPreview && (
+                <div className="mb-3 d-flex align-items-center gap-3 p-2 bg-dark rounded border border-secondary">
+                  <img
+                    src={photoPreview}
+                    alt="Prato do Usuário"
+                    style={{ width: "54px", height: "54px", objectFit: "cover", borderRadius: "8px" }}
+                  />
+                  <div className="flex-grow-1">
+                    <span className="d-block text-warning fw-bold small">Foto Selecionada & Comprimida</span>
+                    <span className="d-block text-muted small" style={{ fontSize: "0.72rem" }}>
+                      Os valores identificados pela IA foram preenchidos nos campos abaixo para você confirmar.
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {visionError && (
+                <div className="text-danger small mb-2" style={{ fontSize: "0.75rem" }}>
+                  {visionError}
+                </div>
+              )}
+
               <div className="input-group mb-2">
                 <input
                   type="text"
